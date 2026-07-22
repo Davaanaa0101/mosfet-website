@@ -1,0 +1,36 @@
+<svg width="420" height="110" viewBox="0 0 420 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mosfetGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C2185B"></stop>
+      <stop offset="100%" stop-color="#E91E63"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <g transform="translate(10,10)">
+    <rect x="0" y="0" width="90" height="90" rx="18" fill="url(#mosfetGradient)"></rect>
+
+    <!-- Stylized M -->
+    <path d="
+      M18 68
+      L18 22
+      L34 46
+      L45 28
+      L56 46
+      L72 22
+      L72 68
+      " stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"></path>
+
+    <!-- Circuit Node -->
+    <circle cx="45" cy="75" r="4.5" fill="white"></circle>
+  </g>
+
+  <!-- Text -->
+  <text x="120" y="48" font-size="34" font-family="Inter, Arial, sans-serif" font-weight="800" fill="#F8FAFC" letter-spacing="4">
+    MOSFET
+  </text>
+
+  <text x="120" y="76" font-size="15" font-family="Inter, Arial, sans-serif" fill="#94A3B8">
+    Engineering Smarter Systems
+  </text>
+</svg>

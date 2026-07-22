@@ -1,44 +1,86 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+
 import Container from "@/components/ui/Container";
+import { t } from "@/lib/i18n";
+import QuoteDialog from "@/components/forms/QuoteDialog";
 
 const links = [
-  { name: "Home", href: "/" },
-  { name: "Services", href: "/services" },
-  { name: "Projects", href: "/projects" },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
+  { name: t.nav.home, href: "#hero" },
+  { name: t.nav.about, href: "#about" },
+  { name: t.nav.services, href: "#services" },
+  { name: t.nav.contact, href: "#contact" },
 ];
 
 export default function Navbar() {
+  const [visible, setVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const current = window.scrollY;
+
+      setScrolled(current > 20);
+
+      if (current < 80) {
+        setVisible(true);
+      } else if (current > lastScrollY) {
+        // Scrolling down
+        setVisible(false);
+      } else {
+        // Scrolling up
+        setVisible(true);
+      }
+
+      setLastScrollY(current);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
-      <Container className="flex h-20 items-center justify-between">
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transform transition-all duration-300 ${
+        visible ? "translate-y-0" : "-translate-y-full"
+      } ${
+        scrolled
+          ? "border-b border-primary/10 bg-background/80 backdrop-blur-xl"
+          : "bg-transparent"
+      }`}
+    >
+      <Container
+        className={`flex items-center justify-between transition-all duration-300 ${
+          scrolled ? "h-20" : "h-24"
+        }`}
+      >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500 font-bold text-slate-950">
-            M
-          </div>
 
-          <div>
-            <h1 className="text-xl font-bold tracking-widest text-white">
-              MOSFET
-            </h1>
-
-            <p className="text-xs text-slate-400">
-              Engineering Smarter Systems
-            </p>
-          </div>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="MOSFET"
+            width={220}
+            height={60}
+            priority
+            className="h-12 w-auto"
+          />
         </Link>
 
         {/* Navigation */}
-        <nav className="hidden gap-8 lg:flex">
+
+        <nav className="hidden items-center gap-8 lg:flex">
           {links.map((link) => (
             <Link
               key={link.name}
               href={link.href}
-              className="text-sm font-medium text-slate-300 transition hover:text-emerald-400"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               {link.name}
             </Link>
@@ -46,13 +88,19 @@ export default function Navbar() {
         </nav>
 
         {/* CTA */}
-        <Link
-          href="/contact"
-          className="hidden rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 lg:block"
-        >
-          Request Quote
-        </Link>
+
+        <button
+  onClick={() => setQuoteOpen(true)}
+  className="hidden rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-all duration-300 hover:bg-accent hover:shadow-lg hover:shadow-primary/30 lg:block"
+>
+  {t.nav.quote}
+  
+</button>
       </Container>
+      <QuoteDialog
+  open={quoteOpen}
+  onOpenChange={setQuoteOpen}
+/>
     </header>
   );
 }
