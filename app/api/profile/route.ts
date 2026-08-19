@@ -12,18 +12,58 @@ import User from "@/models/User";
 // =====================================================
 
 export async function GET(
-  _request: NextRequest
+  request: NextRequest
 ) {
   try {
-    // ---------------------------------------------------
-    // GET BETTER AUTH SESSION
-    // ---------------------------------------------------
+    console.log(
+      "[profile] GET started"
+    );
 
-    const session =
-      await auth.api.getSession({
-        headers:
-          _request.headers,
-      });
+    // =================================================
+    // SESSION
+    // =================================================
+
+    let session;
+
+    try {
+      session =
+        await auth.api.getSession({
+          headers:
+            request.headers,
+        });
+
+      console.log(
+        "[profile] Session:",
+        session
+          ? {
+              userId:
+                session.user?.id,
+              email:
+                session.user?.email,
+            }
+          : null
+      );
+    } catch (error) {
+      console.error(
+        "[profile] Session error:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Failed to read authentication session",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    // =================================================
+    // AUTH CHECK
+    // =================================================
 
     if (!session?.user) {
       return NextResponse.json(
@@ -38,21 +78,72 @@ export async function GET(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // DATABASE
-    // ---------------------------------------------------
+    // =================================================
 
-    await connectDB();
+    try {
+      await connectDB();
 
-    // ---------------------------------------------------
-    // FIND APPLICATION USER
-    // ---------------------------------------------------
+      console.log(
+        "[profile] MongoDB connected"
+      );
+    } catch (error) {
+      console.error(
+        "[profile] MongoDB error:",
+        error
+      );
 
-    const user =
-      await User.findOne({
-        email:
-          session.user.email,
-      }).lean();
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Failed to connect to database",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    // =================================================
+    // FIND USER
+    // =================================================
+
+    let user;
+
+    try {
+      user =
+        await User.findOne({
+          email:
+            session.user.email,
+        }).lean();
+
+      console.log(
+        "[profile] User found:",
+        !!user
+      );
+    } catch (error) {
+      console.error(
+        "[profile] User query error:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Failed to query user profile",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    // =================================================
+    // USER NOT FOUND
+    // =================================================
 
     if (!user) {
       return NextResponse.json(
@@ -67,9 +158,9 @@ export async function GET(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // RESPONSE
-    // ---------------------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
@@ -96,7 +187,7 @@ export async function GET(
     });
   } catch (error) {
     console.error(
-      "[profile] GET error:",
+      "[profile] GET unexpected error:",
       error
     );
 
@@ -114,16 +205,20 @@ export async function GET(
 }
 
 // =====================================================
-// UPDATE PROFILE
+// PUT PROFILE
 // =====================================================
 
 export async function PUT(
   request: NextRequest
 ) {
   try {
-    // ---------------------------------------------------
-    // GET BETTER AUTH SESSION
-    // ---------------------------------------------------
+    console.log(
+      "[profile] PUT started"
+    );
+
+    // =================================================
+    // SESSION
+    // =================================================
 
     const session =
       await auth.api.getSession({
@@ -144,22 +239,18 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // DATABASE
-    // ---------------------------------------------------
+    // =================================================
 
     await connectDB();
 
-    // ---------------------------------------------------
-    // READ BODY
-    // ---------------------------------------------------
+    // =================================================
+    // BODY
+    // =================================================
 
     const body =
       await request.json();
-
-    // ---------------------------------------------------
-    // VALIDATE NAME
-    // ---------------------------------------------------
 
     const name =
       typeof body.name ===
@@ -193,9 +284,9 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // FIND USER
-    // ---------------------------------------------------
+    // =================================================
 
     const user =
       await User.findOne({
@@ -216,18 +307,17 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // UPDATE
-    // ---------------------------------------------------
+    // =================================================
 
-    user.name =
-      name;
+    user.name = name;
 
     await user.save();
 
-    // ---------------------------------------------------
+    // =================================================
     // RESPONSE
-    // ---------------------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
