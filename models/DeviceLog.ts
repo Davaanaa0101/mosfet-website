@@ -1,26 +1,25 @@
-import mongoose, { Schema, Model, Document } from "mongoose";
+import mongoose, {
+  Schema,
+  Model,
+  Document,
+} from "mongoose";
 
 export interface IDeviceLog extends Document {
   deviceId: string;
 
   temperature?: number;
-
   humidity?: number;
 
   voltage?: number;
-
   current?: number;
-
   power?: number;
+  energy?: number;
 
   wifiSSID?: string;
-
   ipAddress?: string;
 
   rssi?: number;
-
   freeHeap?: number;
-
   uptime?: number;
 
   createdAt: Date;
@@ -28,27 +27,55 @@ export interface IDeviceLog extends Document {
 
 const DeviceLogSchema = new Schema<IDeviceLog>(
   {
-    deviceId: String,
+    deviceId: {
+      type: String,
+      required: true,
+      index: true,
+    },
 
-    temperature: Number,
+    temperature: {
+      type: Number,
+    },
 
-    humidity: Number,
+    humidity: {
+      type: Number,
+    },
 
-    voltage: Number,
+    voltage: {
+      type: Number,
+    },
 
-    current: Number,
+    current: {
+      type: Number,
+    },
 
-    power: Number,
+    power: {
+      type: Number,
+    },
 
-    wifiSSID: String,
+    energy: {
+      type: Number,
+    },
 
-    ipAddress: String,
+    wifiSSID: {
+      type: String,
+    },
 
-    rssi: Number,
+    ipAddress: {
+      type: String,
+    },
 
-    freeHeap: Number,
+    rssi: {
+      type: Number,
+    },
 
-    uptime: Number,
+    freeHeap: {
+      type: Number,
+    },
+
+    uptime: {
+      type: Number,
+    },
   },
   {
     timestamps: {
@@ -58,5 +85,11 @@ const DeviceLogSchema = new Schema<IDeviceLog>(
   }
 );
 
-export default (mongoose.models.DeviceLog ||
-  mongoose.model<IDeviceLog>("DeviceLog", DeviceLogSchema)) as Model<IDeviceLog>;
+const DeviceLog: Model<IDeviceLog> =
+  mongoose.models.DeviceLog ||
+  mongoose.model<IDeviceLog>(
+    "DeviceLog",
+    DeviceLogSchema
+  );
+
+export default DeviceLog;
