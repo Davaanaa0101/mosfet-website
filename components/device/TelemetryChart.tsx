@@ -17,30 +17,23 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 
 // =====================================================
 // TYPES
 // =====================================================
 
-interface ChartData {
+export interface TelemetrySeries {
+  key: string;
+  name: string;
+}
+
+export interface ChartData {
   createdAt: string;
+  time: string;
 
-  time?: string;
-
-  value?: number | null;
-
-  temperature?: number | null;
-
-  humidity?: number | null;
-
-  voltage?: number | null;
-
-  current?: number | null;
-
-  power?: number | null;
-
-  energy?: number | null;
+  [key: string]: string | number | null;
 }
 
 interface TelemetryChartProps {
@@ -48,14 +41,7 @@ interface TelemetryChartProps {
 
   data: ChartData[];
 
-  dataKey:
-    | "value"
-    | "temperature"
-    | "humidity"
-    | "voltage"
-    | "current"
-    | "power"
-    | "energy";
+  series: TelemetrySeries[];
 
   unit: string;
 }
@@ -67,61 +53,28 @@ interface TelemetryChartProps {
 export default function TelemetryChart({
   title,
   data,
-  dataKey,
+  series,
   unit,
 }: TelemetryChartProps) {
   // ===================================================
-  // PREPARE DATA
+  // VALID SERIES
   // ===================================================
 
-  const chartData =
-    useMemo(() => {
-      return data
-        .map((item) => {
-          const rawValue =
-            item[dataKey];
-
-          const numericValue =
-            typeof rawValue ===
-              "number" &&
-            Number.isFinite(
-              rawValue
-            )
-              ? rawValue
-              : null;
-
-          return {
-            ...item,
-
-            value:
-              numericValue,
-
-            chartValue:
-              numericValue,
-
-            time:
-              item.time ||
-              formatTime(
-                item.createdAt
-              ),
-          };
-        })
-        .filter(
-          (item) =>
-            item.chartValue !==
-            null
-        );
-    }, [
-      data,
-      dataKey,
-    ]);
+  const validSeries = useMemo(() => {
+    return series.filter(
+      (item) =>
+        typeof item.key === "string" &&
+        item.key.length > 0
+    );
+  }, [series]);
 
   // ===================================================
   // EMPTY STATE
   // ===================================================
 
   if (
-    chartData.length === 0
+    data.length === 0 ||
+    validSeries.length === 0
   ) {
     return (
       <Card>
@@ -132,10 +85,9 @@ export default function TelemetryChart({
         </CardHeader>
 
         <CardContent>
-          <div className="flex h-[300px] items-center justify-center">
+          <div className="flex h-[320px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
-              No {title.toLowerCase()}{" "}
-              data available.
+              No {title.toLowerCase()} data available.
             </p>
           </div>
         </CardContent>
@@ -156,32 +108,32 @@ export default function TelemetryChart({
       </CardHeader>
 
       <CardContent>
-        <div className="h-[300px] w-full">
+        <div className="h-[350px] w-full">
           <ResponsiveContainer
             width="100%"
             height="100%"
           >
             <LineChart
-              data={chartData}
+              data={data}
               margin={{
                 top: 10,
                 right: 20,
-                left: 5,
-                bottom: 5,
+                left: 10,
+                bottom: 10,
               }}
             >
-              {/* ================================= */}
+              {/* ===================================== */}
               {/* GRID */}
-              {/* ================================= */}
+              {/* ===================================== */}
 
               <CartesianGrid
                 strokeDasharray="3 3"
                 className="stroke-muted"
               />
 
-              {/* ================================= */}
+              {/* ===================================== */}
               {/* X AXIS */}
-              {/* ================================= */}
+              {/* ===================================== */}
 
               <XAxis
                 dataKey="time"
@@ -193,14 +145,14 @@ export default function TelemetryChart({
                 }}
               />
 
-              {/* ================================= */}
+              {/* ===================================== */}
               {/* Y AXIS */}
-              {/* ================================= */}
+              {/* ===================================== */}
 
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={65}
+                width={70}
                 tick={{
                   fontSize: 12,
                 }}
@@ -209,19 +161,18 @@ export default function TelemetryChart({
                 ) =>
                   unit
                     ? `${value} ${unit}`
-                    : String(
-                        value
-                      )
+                    : String(value)
                 }
               />
 
-              {/* ================================= */}
+              {/* ===================================== */}
               {/* TOOLTIP */}
-              {/* ================================= */}
+              {/* ===================================== */}
 
               <Tooltip
                 formatter={(
-                  rawValue
+                  rawValue,
+                  dataKey
                 ) => {
                   const value =
                     typeof rawValue ===
@@ -230,6 +181,11 @@ export default function TelemetryChart({
                       : Number(
                           rawValue
                         );
+
+                  const label =
+                    String(
+                      dataKey ?? ""
+                    );
 
                   if (
                     Number.isFinite(
@@ -244,7 +200,7 @@ export default function TelemetryChart({
                         : value.toFixed(
                             2
                           ),
-                      title,
+                      label,
                     ];
                   }
 
@@ -252,7 +208,7 @@ export default function TelemetryChart({
                     String(
                       rawValue
                     ),
-                    title,
+                    label,
                   ];
                 }}
                 labelFormatter={(
@@ -264,70 +220,70 @@ export default function TelemetryChart({
                 }
               />
 
-              {/* ================================= */}
-              {/* LINE */}
-              {/* ================================= */}
+              {/* ===================================== */}
+              {/* LEGEND */}
+              {/* ===================================== */}
 
-              <Line
-                type="monotone"
-                dataKey="chartValue"
-                name={title}
-                dot={false}
-                strokeWidth={2}
-                activeDot={{
-                  r: 5,
+              <Legend
+                verticalAlign="bottom"
+                height={50}
+                wrapperStyle={{
+                  fontSize: "12px",
                 }}
-                isAnimationActive={
-                  false
-                }
               />
+
+              {/* ===================================== */}
+              {/* SENSOR LINES */}
+              {/* ===================================== */}
+
+              {validSeries.map(
+                (item, index) => (
+                  <Line
+                    key={item.key}
+                    type="monotone"
+                    dataKey={
+                      item.key
+                    }
+                    name={
+                      item.name
+                    }
+                    dot={false}
+                    strokeWidth={2}
+                    activeDot={{
+                      r: 5,
+                    }}
+                    isAnimationActive={
+                      false
+                    }
+                    connectNulls={false}
+                  />
+                )
+              )}
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        {/* ========================================= */}
+        {/* =========================================== */}
         {/* FOOTER */}
-        {/* ========================================= */}
+        {/* =========================================== */}
 
         <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
           <span>
-            {chartData.length}{" "}
+            {data.length}{" "}
             readings
           </span>
 
           <span>
-            Unit:{" "}
-            {unit || "—"}
+            {validSeries.length}{" "}
+            sensor
+            {validSeries.length !==
+            1
+              ? "s"
+              : ""}{" "}
+            · {unit || "—"}
           </span>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-// =====================================================
-// TIME FORMAT
-// =====================================================
-
-function formatTime(
-  timestamp: string
-): string {
-  const date =
-    new Date(timestamp);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "";
-  }
-
-  return date.toLocaleTimeString(
-    [],
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
   );
 }
