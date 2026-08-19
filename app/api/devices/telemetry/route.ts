@@ -4,6 +4,30 @@ import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
 
+const DEVICE_TYPES = [
+  "esp32",
+  "plc",
+  "modbus",
+  "camera",
+] as const;
+
+type DeviceType = (typeof DEVICE_TYPES)[number];
+
+function normalizeDeviceType(
+  value: unknown
+): DeviceType {
+  if (
+    typeof value === "string" &&
+    DEVICE_TYPES.includes(
+      value.trim().toLowerCase() as DeviceType
+    )
+  ) {
+    return value.trim().toLowerCase() as DeviceType;
+  }
+
+  return "esp32";
+}
+
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
@@ -45,16 +69,40 @@ export async function POST(req: NextRequest) {
           success: false,
           error: "deviceId is required",
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
+
+    const normalizedDeviceId =
+      deviceId.trim();
+
+    if (!normalizedDeviceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "deviceId cannot be empty",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // -----------------------------------------
+    // NORMALIZE DEVICE TYPE
+    // -----------------------------------------
+
+    const normalizedType =
+      normalizeDeviceType(type);
 
     // -----------------------------------------
     // FIND DEVICE
     // -----------------------------------------
 
     let device = await Device.findOne({
-      deviceId,
+      deviceId: normalizedDeviceId,
     });
 
     // -----------------------------------------
@@ -63,36 +111,34 @@ export async function POST(req: NextRequest) {
 
     if (!device) {
       device = await Device.create({
-        deviceId,
+        deviceId: normalizedDeviceId,
 
         name:
-          typeof name === "string" && name.trim()
+          typeof name === "string" &&
+          name.trim()
             ? name.trim()
-            : deviceId,
+            : normalizedDeviceId,
 
-        type:
-          typeof type === "string" && type.trim()
-            ? type.trim()
-            : "esp32",
+        type: normalizedType,
 
         location:
           typeof location === "string"
-            ? location
+            ? location.trim()
             : "",
 
         macAddress:
           typeof macAddress === "string"
-            ? macAddress
+            ? macAddress.trim()
             : "",
 
         firmware:
           typeof firmware === "string"
-            ? firmware
+            ? firmware.trim()
             : "",
 
         ipAddress:
           typeof ipAddress === "string"
-            ? ipAddress
+            ? ipAddress.trim()
             : "",
 
         status: "online",
@@ -101,7 +147,7 @@ export async function POST(req: NextRequest) {
       });
 
       console.log(
-        `[telemetry] Registered new device: ${deviceId}`
+        `[telemetry] Registered new device: ${normalizedDeviceId}`
       );
     }
 
@@ -113,28 +159,47 @@ export async function POST(req: NextRequest) {
       device.status = "online";
       device.lastSeen = new Date();
 
-      if (name) {
-        device.name = name;
+      if (
+        typeof name === "string" &&
+        name.trim()
+      ) {
+        device.name =
+          name.trim();
       }
 
-      if (type) {
-        device.type = type;
+      device.type =
+        normalizedType;
+
+      if (
+        typeof location === "string" &&
+        location.trim()
+      ) {
+        device.location =
+          location.trim();
       }
 
-      if (location) {
-        device.location = location;
+      if (
+        typeof macAddress === "string" &&
+        macAddress.trim()
+      ) {
+        device.macAddress =
+          macAddress.trim();
       }
 
-      if (macAddress) {
-        device.macAddress = macAddress;
+      if (
+        typeof firmware === "string" &&
+        firmware.trim()
+      ) {
+        device.firmware =
+          firmware.trim();
       }
 
-      if (firmware) {
-        device.firmware = firmware;
-      }
-
-      if (ipAddress) {
-        device.ipAddress = ipAddress;
+      if (
+        typeof ipAddress === "string" &&
+        ipAddress.trim()
+      ) {
+        device.ipAddress =
+          ipAddress.trim();
       }
 
       await device.save();
@@ -145,7 +210,7 @@ export async function POST(req: NextRequest) {
     // -----------------------------------------
 
     await DeviceLog.create({
-      deviceId,
+      deviceId: normalizedDeviceId,
 
       temperature:
         typeof temperature === "number"
@@ -210,7 +275,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Telemetry received",
-      deviceId,
+      deviceId: normalizedDeviceId,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -224,7 +289,9 @@ export async function POST(req: NextRequest) {
         success: false,
         error: "Internal Server Error",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
