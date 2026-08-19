@@ -9,22 +9,7 @@ import DeviceLog from "@/models/DeviceLog";
 import Alert, {
   AlertType,
 } from "@/models/Alert";
-
-// =====================================================
-// ALERT THRESHOLDS
-// =====================================================
-
-const ALERT_THRESHOLDS = {
-  highTemperature: 30,
-  lowTemperature: 0,
-
-  highHumidity: 80,
-  lowHumidity: 20,
-
-  highCurrent: 10,
-
-  lowRssi: -80,
-};
+import AlertSettings from "@/models/AlertSettings";
 
 // =====================================================
 // ALERT TYPES
@@ -39,14 +24,6 @@ const ALERT_TYPES = [
   "HIGH_CURRENT",
   "LOW_RSSI",
 ] as const;
-
-function isAlertType(
-  value: string
-): value is AlertType {
-  return ALERT_TYPES.includes(
-    value as AlertType
-  );
-}
 
 // =====================================================
 // TYPES
@@ -66,6 +43,18 @@ interface SensorConfig {
 }
 
 // =====================================================
+// ALERT TYPE CHECK
+// =====================================================
+
+function isAlertType(
+  value: string
+): value is AlertType {
+  return ALERT_TYPES.includes(
+    value as AlertType
+  );
+}
+
+// =====================================================
 // POST TELEMETRY
 // =====================================================
 
@@ -73,7 +62,98 @@ export async function POST(
   req: NextRequest
 ) {
   try {
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // LOAD ALERT SETTINGS
+    //
+    // Settings are stored in MongoDB.
+    // If no settings exist yet, use safe defaults.
+    // =================================================
+
+    const alertSettings =
+      await AlertSettings.findOne()
+        .lean();
+
+    const settings = {
+      highTemperatureEnabled:
+        alertSettings?.highTemperatureEnabled ??
+        true,
+
+      highTemperature:
+        typeof alertSettings?.highTemperature ===
+        "number"
+          ? alertSettings.highTemperature
+          : 30,
+
+      lowTemperatureEnabled:
+        alertSettings?.lowTemperatureEnabled ??
+        true,
+
+      lowTemperature:
+        typeof alertSettings?.lowTemperature ===
+        "number"
+          ? alertSettings.lowTemperature
+          : 0,
+
+      highHumidityEnabled:
+        alertSettings?.highHumidityEnabled ??
+        true,
+
+      highHumidity:
+        typeof alertSettings?.highHumidity ===
+        "number"
+          ? alertSettings.highHumidity
+          : 80,
+
+      lowHumidityEnabled:
+        alertSettings?.lowHumidityEnabled ??
+        true,
+
+      lowHumidity:
+        typeof alertSettings?.lowHumidity ===
+        "number"
+          ? alertSettings.lowHumidity
+          : 20,
+
+      highCurrentEnabled:
+        alertSettings?.highCurrentEnabled ??
+        true,
+
+      highCurrent:
+        typeof alertSettings?.highCurrent ===
+        "number"
+          ? alertSettings.highCurrent
+          : 10,
+
+      lowRssiEnabled:
+        alertSettings?.lowRssiEnabled ??
+        true,
+
+      lowRssi:
+        typeof alertSettings?.lowRssi ===
+        "number"
+          ? alertSettings.lowRssi
+          : -80,
+
+      deviceOfflineEnabled:
+        alertSettings?.deviceOfflineEnabled ??
+        true,
+
+      deviceOfflineSeconds:
+        typeof alertSettings?.deviceOfflineSeconds ===
+        "number"
+          ? alertSettings.deviceOfflineSeconds
+          : 30,
+    };
+
+    // =================================================
+    // READ BODY
+    // =================================================
 
     const body =
       await req.json();
@@ -108,7 +188,8 @@ export async function POST(
 
     if (
       !deviceId ||
-      typeof deviceId !== "string"
+      typeof deviceId !==
+        "string"
     ) {
       return NextResponse.json(
         {
@@ -125,7 +206,9 @@ export async function POST(
     const normalizedDeviceId =
       deviceId.trim();
 
-    if (!normalizedDeviceId) {
+    if (
+      !normalizedDeviceId
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -139,7 +222,7 @@ export async function POST(
     }
 
     // =================================================
-    // NORMALIZE DEVICE TYPE
+    // DEVICE TYPES
     // =================================================
 
     const deviceTypes = [
@@ -185,7 +268,8 @@ export async function POST(
             normalizedDeviceId,
 
           name:
-            typeof name === "string" &&
+            typeof name ===
+              "string" &&
             name.trim()
               ? name.trim()
               : normalizedDeviceId,
@@ -194,22 +278,26 @@ export async function POST(
             normalizedType,
 
           location:
-            typeof location === "string"
+            typeof location ===
+            "string"
               ? location.trim()
               : "",
 
           macAddress:
-            typeof macAddress === "string"
+            typeof macAddress ===
+            "string"
               ? macAddress.trim()
               : "",
 
           firmware:
-            typeof firmware === "string"
+            typeof firmware ===
+            "string"
               ? firmware.trim()
               : "",
 
           ipAddress:
-            typeof ipAddress === "string"
+            typeof ipAddress ===
+            "string"
               ? ipAddress.trim()
               : "",
 
@@ -236,7 +324,8 @@ export async function POST(
         new Date();
 
       if (
-        typeof name === "string" &&
+        typeof name ===
+          "string" &&
         name.trim()
       ) {
         device.name =
@@ -247,7 +336,8 @@ export async function POST(
         normalizedType;
 
       if (
-        typeof location === "string" &&
+        typeof location ===
+          "string" &&
         location.trim()
       ) {
         device.location =
@@ -264,7 +354,8 @@ export async function POST(
       }
 
       if (
-        typeof firmware === "string" &&
+        typeof firmware ===
+          "string" &&
         firmware.trim()
       ) {
         device.firmware =
@@ -272,7 +363,8 @@ export async function POST(
       }
 
       if (
-        typeof ipAddress === "string" &&
+        typeof ipAddress ===
+          "string" &&
         ipAddress.trim()
       ) {
         device.ipAddress =
@@ -283,14 +375,7 @@ export async function POST(
     }
 
     // =================================================
-    // IMPORTANT
-    // =================================================
-    // At this point device has been either:
-    //
-    // 1. Found in MongoDB
-    // 2. Created in MongoDB
-    //
-    // So create a guaranteed non-null reference.
+    // GUARANTEED DEVICE REFERENCE
     // =================================================
 
     const currentDevice =
@@ -313,7 +398,8 @@ export async function POST(
             )
             .map(
               (sensor) => ({
-                slot: sensor.slot,
+                slot:
+                  sensor.slot,
 
                 type:
                   sensor.type,
@@ -407,7 +493,7 @@ export async function POST(
       });
 
     // =================================================
-    // LOAD SENSOR CONFIGURATION
+    // SENSOR CONFIGURATION
     // =================================================
 
     const configuredSensors: SensorConfig[] =
@@ -443,7 +529,7 @@ export async function POST(
     }
 
     // =================================================
-    // ACTIVATE ALERT
+    // CREATE ALERT
     // =================================================
 
     async function activateAlert(
@@ -490,9 +576,11 @@ export async function POST(
         type:
           options.type,
 
-        status: "active",
+        status:
+          "active",
       };
 
+      // Sensor alerts are unique per slot.
       if (
         typeof options.slot ===
         "number"
@@ -506,6 +594,8 @@ export async function POST(
           query
         );
 
+      // Do not create duplicate
+      // active alerts every 10 seconds.
       if (existing) {
         return;
       }
@@ -552,9 +642,11 @@ export async function POST(
             : null,
 
         unit:
-          options.unit || "",
+          options.unit ||
+          "",
 
-        status: "active",
+        status:
+          "active",
 
         triggeredAt:
           new Date(),
@@ -580,9 +672,11 @@ export async function POST(
         deviceId:
           normalizedDeviceId,
 
-        type: alertType,
+        type:
+          alertType,
 
-        status: "active",
+        status:
+          "active",
       };
 
       if (
@@ -622,8 +716,10 @@ export async function POST(
     for (
       const sensor of normalizedSensors
     ) {
+      // Ignore missing values.
       if (
-        sensor.value === null ||
+        sensor.value ===
+          null ||
         sensor.value ===
           undefined ||
         !Number.isFinite(
@@ -644,9 +740,9 @@ export async function POST(
       const sensorType =
         sensor.type.toUpperCase();
 
-      // ===============================================
+      // =================================================
       // TEMPERATURE
-      // ===============================================
+      // =================================================
 
       if (
         sensorType ===
@@ -654,11 +750,20 @@ export async function POST(
         sensorType ===
           "DHT_TEMPERATURE"
       ) {
+        // -------------------------------------------------
         // HIGH TEMPERATURE
+        // -------------------------------------------------
 
         if (
+          !settings.highTemperatureEnabled
+        ) {
+          await resolveAlert(
+            "HIGH_TEMPERATURE",
+            sensor.slot
+          );
+        } else if (
           value >
-          ALERT_THRESHOLDS.highTemperature
+          settings.highTemperature
         ) {
           await activateAlert({
             type:
@@ -686,9 +791,10 @@ export async function POST(
             value,
 
             threshold:
-              ALERT_THRESHOLDS.highTemperature,
+              settings.highTemperature,
 
-            unit: "°C",
+            unit:
+              "°C",
           });
         } else {
           await resolveAlert(
@@ -697,11 +803,20 @@ export async function POST(
           );
         }
 
+        // -------------------------------------------------
         // LOW TEMPERATURE
+        // -------------------------------------------------
 
         if (
+          !settings.lowTemperatureEnabled
+        ) {
+          await resolveAlert(
+            "LOW_TEMPERATURE",
+            sensor.slot
+          );
+        } else if (
           value <
-          ALERT_THRESHOLDS.lowTemperature
+          settings.lowTemperature
         ) {
           await activateAlert({
             type:
@@ -729,9 +844,10 @@ export async function POST(
             value,
 
             threshold:
-              ALERT_THRESHOLDS.lowTemperature,
+              settings.lowTemperature,
 
-            unit: "°C",
+            unit:
+              "°C",
           });
         } else {
           await resolveAlert(
@@ -741,19 +857,28 @@ export async function POST(
         }
       }
 
-      // ===============================================
+      // =================================================
       // HUMIDITY
-      // ===============================================
+      // =================================================
 
       if (
         sensorType ===
         "DHT_HUMIDITY"
       ) {
+        // -------------------------------------------------
         // HIGH HUMIDITY
+        // -------------------------------------------------
 
         if (
+          !settings.highHumidityEnabled
+        ) {
+          await resolveAlert(
+            "HIGH_HUMIDITY",
+            sensor.slot
+          );
+        } else if (
           value >
-          ALERT_THRESHOLDS.highHumidity
+          settings.highHumidity
         ) {
           await activateAlert({
             type:
@@ -781,9 +906,10 @@ export async function POST(
             value,
 
             threshold:
-              ALERT_THRESHOLDS.highHumidity,
+              settings.highHumidity,
 
-            unit: "%",
+            unit:
+              "%",
           });
         } else {
           await resolveAlert(
@@ -792,11 +918,20 @@ export async function POST(
           );
         }
 
+        // -------------------------------------------------
         // LOW HUMIDITY
+        // -------------------------------------------------
 
         if (
+          !settings.lowHumidityEnabled
+        ) {
+          await resolveAlert(
+            "LOW_HUMIDITY",
+            sensor.slot
+          );
+        } else if (
           value <
-          ALERT_THRESHOLDS.lowHumidity
+          settings.lowHumidity
         ) {
           await activateAlert({
             type:
@@ -824,9 +959,10 @@ export async function POST(
             value,
 
             threshold:
-              ALERT_THRESHOLDS.lowHumidity,
+              settings.lowHumidity,
 
-            unit: "%",
+            unit:
+              "%",
           });
         } else {
           await resolveAlert(
@@ -838,7 +974,7 @@ export async function POST(
     }
 
     // =================================================
-    // CURRENT
+    // CURRENT ALERT
     // =================================================
 
     if (
@@ -849,8 +985,14 @@ export async function POST(
       )
     ) {
       if (
+        !settings.highCurrentEnabled
+      ) {
+        await resolveAlert(
+          "HIGH_CURRENT"
+        );
+      } else if (
         Math.abs(current) >
-        ALERT_THRESHOLDS.highCurrent
+        settings.highCurrent
       ) {
         await activateAlert({
           type:
@@ -871,9 +1013,10 @@ export async function POST(
             current,
 
           threshold:
-            ALERT_THRESHOLDS.highCurrent,
+            settings.highCurrent,
 
-          unit: "A",
+          unit:
+            "A",
         });
       } else {
         await resolveAlert(
@@ -883,7 +1026,7 @@ export async function POST(
     }
 
     // =================================================
-    // RSSI
+    // RSSI ALERT
     // =================================================
 
     if (
@@ -894,8 +1037,14 @@ export async function POST(
       )
     ) {
       if (
+        !settings.lowRssiEnabled
+      ) {
+        await resolveAlert(
+          "LOW_RSSI"
+        );
+      } else if (
         rssi <
-        ALERT_THRESHOLDS.lowRssi
+        settings.lowRssi
       ) {
         await activateAlert({
           type:
@@ -914,9 +1063,10 @@ export async function POST(
             rssi,
 
           threshold:
-            ALERT_THRESHOLDS.lowRssi,
+            settings.lowRssi,
 
-          unit: "dBm",
+          unit:
+            "dBm",
         });
       } else {
         await resolveAlert(
@@ -930,7 +1080,8 @@ export async function POST(
     // =================================================
 
     return NextResponse.json({
-      success: true,
+      success:
+        true,
 
       message:
         "Telemetry received",
@@ -957,7 +1108,8 @@ export async function POST(
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
 
         error:
           "Internal Server Error",
