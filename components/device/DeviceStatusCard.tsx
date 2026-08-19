@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import {
   Card,
   CardContent,
@@ -8,34 +13,65 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// =====================================================
+// TELEMETRY TYPES
+// =====================================================
+
 interface TelemetryData {
+  _id?: string;
+
+  deviceId?: string;
+
   createdAt: string;
 
-  temperature?: number;
-  humidity?: number;
-  voltage?: number;
-  current?: number;
-  power?: number;
-  energy?: number;
+  temperature?: number | null;
 
-  rssi?: number;
-  freeHeap?: number;
-  uptime?: number;
+  humidity?: number | null;
 
-  wifiSSID?: string;
-  ipAddress?: string;
+  voltage?: number | null;
+
+  current?: number | null;
+
+  power?: number | null;
+
+  energy?: number | null;
+
+  rssi?: number | null;
+
+  freeHeap?: number | null;
+
+  uptime?: number | null;
+
+  wifiSSID?: string | null;
+
+  ipAddress?: string | null;
 }
+
+// =====================================================
+// API RESPONSE
+// =====================================================
 
 interface TelemetryResponse {
   success: boolean;
+
   deviceId: string;
+
   data: TelemetryData[];
+
   error?: string;
 }
+
+// =====================================================
+// PROPS
+// =====================================================
 
 interface Props {
   deviceId: string;
 }
+
+// =====================================================
+// COMPONENT
+// =====================================================
 
 export default function DeviceStatusCard({
   deviceId,
@@ -49,6 +85,10 @@ export default function DeviceStatusCard({
   const [error, setError] =
     useState<string | null>(null);
 
+  // ===================================================
+  // LOAD LATEST TELEMETRY
+  // ===================================================
+
   const loadTelemetry = useCallback(
     async () => {
       try {
@@ -57,64 +97,117 @@ export default function DeviceStatusCard({
             deviceId
           )}/telemetry?limit=1`,
           {
+            method: "GET",
+
             cache: "no-store",
+
+            headers: {
+              Accept:
+                "application/json",
+            },
           }
         );
 
+        const result =
+          (await response.json()) as
+            | TelemetryResponse
+            | {
+                success?: false;
+                error?: string;
+              };
+
         if (!response.ok) {
           throw new Error(
-            "Failed to load telemetry"
+            "error" in result &&
+            result.error
+              ? result.error
+              : `Failed to load telemetry (${response.status})`
           );
         }
 
-        const result =
-          (await response.json()) as TelemetryResponse;
-
-        if (!result.success) {
+        if (
+          !("success" in result) ||
+          !result.success
+        ) {
           throw new Error(
-            result.error ||
-              "Failed to load telemetry"
+            "error" in result &&
+            result.error
+              ? result.error
+              : "Failed to load telemetry"
           );
         }
 
-        const latestData =
-          result.data?.[result.data.length - 1] ??
-          null;
+        // -------------------------------------------
+        // GET NEWEST RECORD
+        // -------------------------------------------
 
-        setLatest(latestData);
+        const telemetry =
+          result.data ?? [];
+
+        const newest =
+          telemetry.length > 0
+            ? telemetry[
+                telemetry.length - 1
+              ]
+            : null;
+
+        // -------------------------------------------
+        // UPDATE STATE
+        // -------------------------------------------
+
+        setLatest(newest);
+
         setError(null);
       } catch (err) {
         console.error(
-          "[DeviceStatusCard]",
+          "[DeviceStatusCard] telemetry error:",
           err
         );
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load telemetry"
-        );
+        // -------------------------------------------
+        // DON'T DESTROY PREVIOUS DATA
+        // -------------------------------------------
+
+        if (!latest) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load telemetry"
+          );
+        }
       } finally {
         setLoading(false);
       }
     },
-    [deviceId]
+    [deviceId, latest]
   );
+
+  // ===================================================
+  // INITIAL LOAD + AUTO REFRESH
+  // ===================================================
 
   useEffect(() => {
     loadTelemetry();
 
-    const interval = setInterval(
-      loadTelemetry,
-      10000
-    );
+    const interval =
+      setInterval(
+        loadTelemetry,
+        10000
+      );
 
     return () => {
       clearInterval(interval);
     };
   }, [loadTelemetry]);
 
-  if (loading) {
+  // ===================================================
+  // LOADING
+  // ===================================================
+
+  if (
+    loading &&
+    !latest
+  ) {
     return (
       <Card>
         <CardHeader>
@@ -132,7 +225,13 @@ export default function DeviceStatusCard({
     );
   }
 
-  if (error || !latest) {
+  // ===================================================
+  // ERROR / NO DATA
+  // ===================================================
+
+  if (
+    !latest
+  ) {
     return (
       <Card>
         <CardHeader>
@@ -142,7 +241,7 @@ export default function DeviceStatusCard({
         </CardHeader>
 
         <CardContent>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-destructive">
             {error ||
               "No telemetry available."}
           </p>
@@ -151,69 +250,71 @@ export default function DeviceStatusCard({
     );
   }
 
+  // ===================================================
+  // LIVE DATA
+  // ===================================================
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>
           Live Status
         </CardTitle>
+
+        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+          Online
+        </span>
       </CardHeader>
 
       <CardContent>
+        {/* ----------------------------------------- */}
+        {/* MAIN METRICS */}
+        {/* ----------------------------------------- */}
+
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Metric
             title="Temperature"
-            value={
-              latest.temperature != null
-                ? `${latest.temperature.toFixed(
-                    1
-                  )} °C`
-                : "--"
-            }
+            value={formatNumber(
+              latest.temperature,
+              "°C",
+              1
+            )}
           />
 
           <Metric
             title="Humidity"
-            value={
-              latest.humidity != null
-                ? `${latest.humidity.toFixed(
-                    1
-                  )} %`
-                : "--"
-            }
+            value={formatNumber(
+              latest.humidity,
+              "%",
+              1
+            )}
           />
 
           <Metric
             title="Current"
-            value={
-              latest.current != null
-                ? `${latest.current.toFixed(
-                    2
-                  )} A`
-                : "--"
-            }
+            value={formatNumber(
+              latest.current,
+              "A",
+              2
+            )}
           />
 
           <Metric
             title="Voltage"
-            value={
-              latest.voltage != null
-                ? `${latest.voltage.toFixed(
-                    1
-                  )} V`
-                : "--"
-            }
+            value={formatNumber(
+              latest.voltage,
+              "V",
+              1
+            )}
           />
 
           <Metric
             title="Power"
-            value={
-              latest.power != null
-                ? `${latest.power.toFixed(
-                    1
-                  )} W`
-                : "--"
-            }
+            value={formatNumber(
+              latest.power,
+              "W",
+              1
+            )}
           />
 
           <Metric
@@ -226,13 +327,18 @@ export default function DeviceStatusCard({
           />
         </div>
 
+        {/* ----------------------------------------- */}
+        {/* SYSTEM INFORMATION */}
+        {/* ----------------------------------------- */}
+
         <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
           <Metric
             title="Free Heap"
             value={
               latest.freeHeap != null
                 ? `${(
-                    latest.freeHeap / 1024
+                    latest.freeHeap /
+                    1024
                   ).toFixed(1)} KB`
                 : "--"
             }
@@ -256,18 +362,42 @@ export default function DeviceStatusCard({
               "--"
             }
           />
+
+          <Metric
+            title="IP Address"
+            value={
+              latest.ipAddress ||
+              "--"
+            }
+          />
         </div>
 
-        <div className="mt-4 text-xs text-muted-foreground">
-          Last telemetry:{" "}
-          {new Date(
-            latest.createdAt
-          ).toLocaleString()}
+        {/* ----------------------------------------- */}
+        {/* LAST UPDATE */}
+        {/* ----------------------------------------- */}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            Last telemetry:{" "}
+            {formatDate(
+              latest.createdAt
+            )}
+          </span>
+
+          {error && (
+            <span className="text-yellow-600">
+              Temporary connection issue
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
+
+// =====================================================
+// METRIC
+// =====================================================
 
 function Metric({
   title,
@@ -289,23 +419,66 @@ function Metric({
   );
 }
 
+// =====================================================
+// FORMAT NUMBER
+// =====================================================
+
+function formatNumber(
+  value:
+    | number
+    | null
+    | undefined,
+  unit: string,
+  decimals: number
+): string {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(value)
+  ) {
+    return "--";
+  }
+
+  return `${value.toFixed(
+    decimals
+  )} ${unit}`;
+}
+
+// =====================================================
+// FORMAT UPTIME
+// =====================================================
+
 function formatUptime(
   seconds: number
 ): string {
+  if (
+    !Number.isFinite(seconds)
+  ) {
+    return "--";
+  }
+
   const totalSeconds =
-    Math.max(0, Math.floor(seconds));
+    Math.max(
+      0,
+      Math.floor(seconds)
+    );
 
-  const days = Math.floor(
-    totalSeconds / 86400
-  );
+  const days =
+    Math.floor(
+      totalSeconds / 86400
+    );
 
-  const hours = Math.floor(
-    (totalSeconds % 86400) / 3600
-  );
+  const hours =
+    Math.floor(
+      (totalSeconds % 86400) /
+        3600
+    );
 
-  const minutes = Math.floor(
-    (totalSeconds % 3600) / 60
-  );
+  const minutes =
+    Math.floor(
+      (totalSeconds % 3600) /
+        60
+    );
 
   const secs =
     totalSeconds % 60;
@@ -323,4 +496,25 @@ function formatUptime(
   }
 
   return `${secs}s`;
+}
+
+// =====================================================
+// FORMAT DATE
+// =====================================================
+
+function formatDate(
+  value: string
+): string {
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "--";
+  }
+
+  return date.toLocaleString();
 }
