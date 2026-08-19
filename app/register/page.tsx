@@ -95,8 +95,14 @@ export default function RegisterPage() {
       const result =
         await signUp.email({
           name: name.trim(),
+
           email: email.trim(),
+
           password,
+
+          phone: phone.trim(),
+
+          company: company.trim(),
         });
 
       if (result.error) {

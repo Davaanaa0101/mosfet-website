@@ -4,8 +4,6 @@ import {
 } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
 
 // =====================================================
 // GET PROFILE
@@ -15,62 +13,20 @@ export async function GET(
   request: NextRequest
 ) {
   try {
-    console.log(
-      "[profile] GET started"
-    );
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
 
-    // =================================================
-    // SESSION
-    // =================================================
-
-    let session;
-
-    try {
-      session =
-        await auth.api.getSession({
-          headers:
-            request.headers,
-        });
-
-      console.log(
-        "[profile] Session:",
-        session
-          ? {
-              userId:
-                session.user?.id,
-              email:
-                session.user?.email,
-            }
-          : null
-      );
-    } catch (error) {
-      console.error(
-        "[profile] Session error:",
-        error
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Failed to read authentication session",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    // =================================================
-    // AUTH CHECK
-    // =================================================
+    // ---------------------------------------------------
+    // NOT LOGGED IN
+    // ---------------------------------------------------
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Unauthorized",
+          error: "Unauthorized",
         },
         {
           status: 401,
@@ -78,102 +34,34 @@ export async function GET(
       );
     }
 
-    // =================================================
-    // DATABASE
-    // =================================================
+    // ---------------------------------------------------
+    // BETTER AUTH USER
+    // ---------------------------------------------------
 
-    try {
-      await connectDB();
+    const user =
+      session.user as typeof session.user & {
+        phone?: string;
+        company?: string;
+        avatar?: string;
+        role?: string;
+      };
 
-      console.log(
-        "[profile] MongoDB connected"
-      );
-    } catch (error) {
-      console.error(
-        "[profile] MongoDB error:",
-        error
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Failed to connect to database",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    // =================================================
-    // FIND USER
-    // =================================================
-
-    let user;
-
-    try {
-      user =
-        await User.findOne({
-          email:
-            session.user.email,
-        }).lean();
-
-      console.log(
-        "[profile] User found:",
-        !!user
-      );
-    } catch (error) {
-      console.error(
-        "[profile] User query error:",
-        error
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Failed to query user profile",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    // =================================================
-    // USER NOT FOUND
-    // =================================================
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "User profile not found",
-        },
-        {
-          status: 404,
-        }
-      );
-    }
-
-    // =================================================
+    // ---------------------------------------------------
     // RESPONSE
-    // =================================================
+    // ---------------------------------------------------
 
     return NextResponse.json({
       success: true,
 
       data: {
+        id:
+          user.id,
+
         name:
           user.name || "",
 
         email:
           user.email || "",
-
-        role:
-          user.role || "customer",
 
         phone:
           user.phone || "",
@@ -182,12 +70,24 @@ export async function GET(
           user.company || "",
 
         avatar:
-          user.avatar || "",
+          user.avatar ||
+          user.image ||
+          "",
+
+        role:
+          user.role ||
+          "user",
+
+        emailVerified:
+          user.emailVerified,
+
+        createdAt:
+          user.createdAt,
       },
     });
   } catch (error) {
     console.error(
-      "[profile] GET unexpected error:",
+      "[profile] GET error:",
       error
     );
 
@@ -205,33 +105,27 @@ export async function GET(
 }
 
 // =====================================================
-// PUT PROFILE
+// UPDATE PROFILE
 // =====================================================
 
 export async function PUT(
   request: NextRequest
 ) {
   try {
-    console.log(
-      "[profile] PUT started"
-    );
-
-    // =================================================
+    // ---------------------------------------------------
     // SESSION
-    // =================================================
+    // ---------------------------------------------------
 
     const session =
       await auth.api.getSession({
-        headers:
-          request.headers,
+        headers: request.headers,
       });
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Unauthorized",
+          error: "Unauthorized",
         },
         {
           status: 401,
@@ -239,24 +133,31 @@ export async function PUT(
       );
     }
 
-    // =================================================
-    // DATABASE
-    // =================================================
-
-    await connectDB();
-
-    // =================================================
+    // ---------------------------------------------------
     // BODY
-    // =================================================
+    // ---------------------------------------------------
 
     const body =
       await request.json();
 
     const name =
-      typeof body.name ===
-      "string"
+      typeof body.name === "string"
         ? body.name.trim()
         : "";
+
+    const phone =
+      typeof body.phone === "string"
+        ? body.phone.trim()
+        : "";
+
+    const company =
+      typeof body.company === "string"
+        ? body.company.trim()
+        : "";
+
+    // ---------------------------------------------------
+    // VALIDATION
+    // ---------------------------------------------------
 
     if (!name) {
       return NextResponse.json(
@@ -284,40 +185,54 @@ export async function PUT(
       );
     }
 
-    // =================================================
-    // FIND USER
-    // =================================================
+    // ---------------------------------------------------
+    // UPDATE BETTER AUTH USER
+    // ---------------------------------------------------
 
-    const user =
-      await User.findOne({
-        email:
-          session.user.email,
+    const updated =
+      await auth.api.updateUser({
+        headers: request.headers,
+
+        body: {
+          name,
+        },
       });
 
-    if (!user) {
+    if (!updated) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "User profile not found",
+            "Failed to update profile",
         },
         {
-          status: 404,
+          status: 500,
         }
       );
     }
 
-    // =================================================
-    // UPDATE
-    // =================================================
+    // ---------------------------------------------------
+    // GET UPDATED SESSION
+    // ---------------------------------------------------
 
-    user.name = name;
+    const updatedSession =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
 
-    await user.save();
+    const user =
+      updatedSession?.user as
+        | (typeof session.user & {
+            phone?: string;
+            company?: string;
+            avatar?: string;
+            role?: string;
+          })
+        | undefined;
 
-    // =================================================
+    // ---------------------------------------------------
     // RESPONSE
-    // =================================================
+    // ---------------------------------------------------
 
     return NextResponse.json({
       success: true,
@@ -326,23 +241,37 @@ export async function PUT(
         "Profile updated successfully",
 
       data: {
+        id:
+          user?.id ||
+          session.user.id,
+
         name:
-          user.name,
+          user?.name ||
+          name,
 
         email:
-          user.email,
+          user?.email ||
+          session.user.email,
 
-        role:
-          user.role,
+        phone,
 
-        phone:
-          user.phone || "",
-
-        company:
-          user.company || "",
+        company,
 
         avatar:
-          user.avatar || "",
+          user?.image ||
+          "",
+
+        role:
+          user?.role ||
+          "user",
+
+        emailVerified:
+          user?.emailVerified ??
+          session.user.emailVerified,
+
+        createdAt:
+          user?.createdAt ||
+          session.user.createdAt,
       },
     });
   } catch (error) {

@@ -9,7 +9,8 @@ export const auth = betterAuth({
     client,
   }),
 
-  secret: process.env.AUTH_SECRET!,
+  secret:
+    process.env.AUTH_SECRET!,
 
   baseURL:
     process.env.AUTH_URL ||
@@ -17,6 +18,39 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
+  },
+
+  user: {
+    additionalFields: {
+      phone: {
+        type: "string",
+        required: false,
+        input: true,
+        returned: true,
+      },
+
+      company: {
+        type: "string",
+        required: false,
+        input: true,
+        returned: true,
+      },
+
+      avatar: {
+        type: "string",
+        required: false,
+        input: true,
+        returned: true,
+      },
+
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "user",
+        input: false,
+        returned: true,
+      },
+    },
   },
 
   plugins: [
