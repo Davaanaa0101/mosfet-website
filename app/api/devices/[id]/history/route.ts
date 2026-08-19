@@ -1,42 +1,162 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { auth } from "@/lib/auth";
+
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
 
 export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest,
+  {
+    params,
+  }: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
   try {
-    await connectDB();
+    // =====================================================
+    // AUTHENTICATION
+    // =====================================================
 
-    const { id } = await params;
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
 
-    // The URL contains MongoDB's _id.
-    const device = await Device.findById(id).lean();
-
-    if (!device) {
+    if (!session?.user) {
       return NextResponse.json(
-        { error: "Device not found" },
-        { status: 404 }
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
       );
     }
 
-    // DeviceLog uses the ESP32's deviceId.
-    const history = await DeviceLog.find({
-      deviceId: device.deviceId,
-    })
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .lean();
+    // =====================================================
+    // DATABASE
+    // =====================================================
 
-    return NextResponse.json(history.reverse());
+    await connectDB();
+
+    // =====================================================
+    // GET DEVICE ID
+    // =====================================================
+
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device ID is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =====================================================
+    // FIND DEVICE BY MONGODB _ID
+    // =====================================================
+
+    let device;
+
+    try {
+      device =
+        await Device.findById(
+          id
+        ).lean();
+    } catch {
+      // Invalid MongoDB ObjectId
+      device = null;
+    }
+
+    // =====================================================
+    // DEVICE NOT FOUND
+    // =====================================================
+
+    if (!device) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // =====================================================
+    // LOAD TELEMETRY HISTORY
+    //
+    // DeviceLog uses the ESP32 deviceId,
+    // not MongoDB _id.
+    // =====================================================
+
+    const history =
+      await DeviceLog.find({
+        deviceId:
+          device.deviceId,
+      })
+        .sort({
+          createdAt: -1,
+        })
+        .limit(500)
+        .lean();
+
+    // =====================================================
+    // OLDEST → NEWEST
+    // =====================================================
+
+    history.reverse();
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    return NextResponse.json({
+      success: true,
+
+      deviceId:
+        device.deviceId,
+
+      deviceName:
+        device.name ||
+        device.deviceId,
+
+      count:
+        history.length,
+
+      data: history,
+    });
   } catch (error) {
-    console.error("Telemetry history error:", error);
+    console.error(
+      "[telemetry-history] GET error:",
+      error
+    );
 
     return NextResponse.json(
-      { error: "Failed to load telemetry history" },
-      { status: 500 }
+      {
+        success: false,
+        error:
+          "Failed to load telemetry history",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

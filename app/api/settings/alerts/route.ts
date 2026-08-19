@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+import { auth } from "@/lib/auth";
+
 import { connectDB } from "@/lib/mongodb";
 import AlertSettings from "@/models/AlertSettings";
 
@@ -33,12 +35,43 @@ const DEFAULT_SETTINGS = {
 // GET
 // =====================================================
 
-export async function GET() {
+export async function GET(
+  request: NextRequest
+) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
 
     let settings =
       await AlertSettings.findOne().lean();
+
+    // =================================================
+    // CREATE DEFAULT SETTINGS
+    // =================================================
 
     if (!settings) {
       const created =
@@ -49,6 +82,10 @@ export async function GET() {
       settings =
         created.toObject();
     }
+
+    // =================================================
+    // RESPONSE
+    // =================================================
 
     return NextResponse.json({
       success: true,
@@ -81,10 +118,43 @@ export async function PUT(
   request: NextRequest
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // READ BODY
+    // =================================================
 
     const body =
       await request.json();
+
+    // =================================================
+    // BUILD UPDATES
+    // =================================================
 
     const updates = {
       highTemperatureEnabled:
@@ -229,10 +299,16 @@ export async function PUT(
         }
       ).lean();
 
+    // =================================================
+    // RESPONSE
+    // =================================================
+
     return NextResponse.json({
       success: true,
+
       message:
         "Alert settings saved",
+
       data: settings,
     });
   } catch (error) {

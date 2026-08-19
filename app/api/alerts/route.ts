@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+import { auth } from "@/lib/auth";
+
 import { connectDB } from "@/lib/mongodb";
 import Alert, {
   AlertType,
@@ -39,7 +41,36 @@ export async function GET(
   request: NextRequest
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // QUERY PARAMETERS
+    // =================================================
 
     const searchParams =
       request.nextUrl.searchParams;
@@ -48,14 +79,19 @@ export async function GET(
       searchParams.get("status");
 
     const limitParam = Number(
-      searchParams.get("limit") ||
-        "100"
+      searchParams.get(
+        "limit"
+      ) || "100"
     );
 
     const limit = Math.min(
       Math.max(
-        Number.isFinite(limitParam)
-          ? Math.floor(limitParam)
+        Number.isFinite(
+          limitParam
+        )
+          ? Math.floor(
+              limitParam
+            )
           : 100,
         1
       ),
@@ -75,7 +111,8 @@ export async function GET(
       status === "active" ||
       status === "resolved"
     ) {
-      query.status = status;
+      query.status =
+        status;
     }
 
     // =================================================
@@ -137,7 +174,6 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-
         error:
           "Failed to load alerts",
       },
@@ -156,7 +192,36 @@ export async function POST(
   request: NextRequest
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // READ BODY
+    // =================================================
 
     const body =
       await request.json();
@@ -187,7 +252,6 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-
           error:
             "deviceId is required",
         },
@@ -202,7 +266,8 @@ export async function POST(
     // =================================================
 
     if (
-      typeof type !== "string" ||
+      typeof type !==
+        "string" ||
       !isAlertType(type)
     ) {
       return NextResponse.json(
@@ -233,7 +298,6 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-
           error:
             "Alert title is required",
         },
@@ -255,7 +319,6 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-
           error:
             "Alert message is required",
         },
@@ -266,11 +329,15 @@ export async function POST(
     }
 
     // =================================================
-    // FIND DEVICE
+    // NORMALIZE DEVICE ID
     // =================================================
 
     const cleanDeviceId =
       deviceId.trim();
+
+    // =================================================
+    // FIND DEVICE
+    // =================================================
 
     const device =
       await Device.findOne({
@@ -282,7 +349,6 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-
           error:
             "Device not found",
         },
@@ -337,7 +403,8 @@ export async function POST(
     // =================================================
 
     const normalizedSeverity =
-      severity === "critical" ||
+      severity ===
+        "critical" ||
       severity === "info"
         ? severity
         : "warning";
@@ -347,7 +414,8 @@ export async function POST(
     // =================================================
 
     const normalizedSlot =
-      typeof slot === "number"
+      typeof slot ===
+      "number"
         ? slot
         : undefined;
 
@@ -364,7 +432,8 @@ export async function POST(
         : undefined;
 
     const normalizedValue =
-      typeof value === "number"
+      typeof value ===
+      "number"
         ? value
         : null;
 
@@ -375,7 +444,8 @@ export async function POST(
         : null;
 
     const normalizedUnit =
-      typeof unit === "string"
+      typeof unit ===
+      "string"
         ? unit.trim()
         : "";
 
@@ -421,7 +491,8 @@ export async function POST(
         unit:
           normalizedUnit,
 
-        status: "active",
+        status:
+          "active",
 
         triggeredAt:
           new Date(),
@@ -453,7 +524,6 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-
         error:
           "Failed to create alert",
       },

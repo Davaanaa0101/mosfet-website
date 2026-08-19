@@ -6,6 +6,24 @@ import {
 import { auth } from "@/lib/auth";
 
 // =====================================================
+// TYPES
+// =====================================================
+
+type ProfileUser = {
+  id: string;
+  name?: string | null;
+  email: string;
+  image?: string | null;
+  emailVerified?: boolean;
+  createdAt?: Date;
+
+  phone?: string;
+  company?: string;
+  avatar?: string;
+  role?: string;
+};
+
+// =====================================================
 // GET PROFILE
 // =====================================================
 
@@ -13,14 +31,14 @@ export async function GET(
   request: NextRequest
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
     const session =
       await auth.api.getSession({
         headers: request.headers,
       });
-
-    // ---------------------------------------------------
-    // NOT LOGGED IN
-    // ---------------------------------------------------
 
     if (!session?.user) {
       return NextResponse.json(
@@ -34,28 +52,22 @@ export async function GET(
       );
     }
 
-    // ---------------------------------------------------
-    // BETTER AUTH USER
-    // ---------------------------------------------------
+    // =================================================
+    // USER
+    // =================================================
 
     const user =
-      session.user as typeof session.user & {
-        phone?: string;
-        company?: string;
-        avatar?: string;
-        role?: string;
-      };
+      session.user as ProfileUser;
 
-    // ---------------------------------------------------
+    // =================================================
     // RESPONSE
-    // ---------------------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
 
       data: {
-        id:
-          user.id,
+        id: user.id,
 
         name:
           user.name || "",
@@ -79,10 +91,12 @@ export async function GET(
           "user",
 
         emailVerified:
-          user.emailVerified,
+          user.emailVerified ??
+          false,
 
         createdAt:
-          user.createdAt,
+          user.createdAt ||
+          null,
       },
     });
   } catch (error) {
@@ -112,9 +126,9 @@ export async function PUT(
   request: NextRequest
 ) {
   try {
-    // ---------------------------------------------------
-    // SESSION
-    // ---------------------------------------------------
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
 
     const session =
       await auth.api.getSession({
@@ -133,31 +147,59 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
-    // BODY
-    // ---------------------------------------------------
+    // =================================================
+    // REQUEST BODY
+    // =================================================
 
-    const body =
-      await request.json();
+    let body: unknown;
+
+    try {
+      body =
+        await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid JSON body",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const data =
+      body as Record<
+        string,
+        unknown
+      >;
+
+    // =================================================
+    // VALUES
+    // =================================================
 
     const name =
-      typeof body.name === "string"
-        ? body.name.trim()
+      typeof data.name ===
+      "string"
+        ? data.name.trim()
         : "";
 
     const phone =
-      typeof body.phone === "string"
-        ? body.phone.trim()
+      typeof data.phone ===
+      "string"
+        ? data.phone.trim()
         : "";
 
     const company =
-      typeof body.company === "string"
-        ? body.company.trim()
+      typeof data.company ===
+      "string"
+        ? data.company.trim()
         : "";
 
-    // ---------------------------------------------------
+    // =================================================
     // VALIDATION
-    // ---------------------------------------------------
+    // =================================================
 
     if (!name) {
       return NextResponse.json(
@@ -185,9 +227,44 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
+    if (phone.length > 30) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Phone number cannot exceed 30 characters",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (company.length > 150) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Company name cannot exceed 150 characters",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
     // UPDATE BETTER AUTH USER
-    // ---------------------------------------------------
+    // =================================================
+    //
+    // At the moment Better Auth's generated API type
+    // only accepts the standard user fields here.
+    //
+    // Therefore name is updated through Better Auth.
+    //
+    // Phone/company will be handled separately once
+    // their additional-field storage is connected.
+    // =================================================
 
     const updated =
       await auth.api.updateUser({
@@ -211,28 +288,34 @@ export async function PUT(
       );
     }
 
-    // ---------------------------------------------------
+    // =================================================
     // GET UPDATED SESSION
-    // ---------------------------------------------------
+    // =================================================
 
     const updatedSession =
       await auth.api.getSession({
         headers: request.headers,
       });
 
-    const user =
-      updatedSession?.user as
-        | (typeof session.user & {
-            phone?: string;
-            company?: string;
-            avatar?: string;
-            role?: string;
-          })
-        | undefined;
+    if (!updatedSession?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Profile updated but session could not be refreshed",
+        },
+        {
+          status: 500,
+        }
+      );
+    }
 
-    // ---------------------------------------------------
+    const user =
+      updatedSession.user as ProfileUser;
+
+    // =================================================
     // RESPONSE
-    // ---------------------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
@@ -242,36 +325,34 @@ export async function PUT(
 
       data: {
         id:
-          user?.id ||
-          session.user.id,
+          user.id,
 
         name:
-          user?.name ||
-          name,
+          user.name || "",
 
         email:
-          user?.email ||
-          session.user.email,
+          user.email || "",
 
         phone,
 
         company,
 
         avatar:
-          user?.image ||
+          user.avatar ||
+          user.image ||
           "",
 
         role:
-          user?.role ||
+          user.role ||
           "user",
 
         emailVerified:
-          user?.emailVerified ??
-          session.user.emailVerified,
+          user.emailVerified ??
+          false,
 
         createdAt:
-          user?.createdAt ||
-          session.user.createdAt,
+          user.createdAt ||
+          null,
       },
     });
   } catch (error) {

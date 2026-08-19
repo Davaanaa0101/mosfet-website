@@ -1,4 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { auth } from "@/lib/auth";
 
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
@@ -67,23 +72,52 @@ const DEFAULT_CONFIG = {
 // =====================================================
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   {
     params,
   }: {
-    params: Promise<{ id: string }>;
+    params: Promise<{
+      id: string;
+    }>;
   }
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
 
-    const { id } = await params;
+    const { id } =
+      await params;
 
     if (!id) {
       return NextResponse.json(
         {
           success: false,
-          error: "Device ID is required",
+          error:
+            "Device ID is required",
         },
         {
           status: 400,
@@ -91,29 +125,33 @@ export async function GET(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // FIND BY DEVICE ID
-    // -----------------------------------------
+    // =================================================
 
-    let device = await Device.findOne({
-      deviceId: id,
-    }).lean();
+    let device =
+      await Device.findOne({
+        deviceId: id,
+      }).lean();
 
-    // -----------------------------------------
-    // ALSO SUPPORT MONGODB _id
-    // -----------------------------------------
+    // =================================================
+    // ALSO SUPPORT MONGODB _ID
+    // =================================================
 
     if (!device) {
       try {
-        device = await Device.findById(id).lean();
+        device =
+          await Device.findById(
+            id
+          ).lean();
       } catch {
-        // Not a valid MongoDB ObjectId.
+        // Invalid MongoDB ObjectId.
       }
     }
 
-    // -----------------------------------------
+    // =================================================
     // DEVICE DOES NOT EXIST
-    // -----------------------------------------
+    // =================================================
 
     if (!device) {
       return NextResponse.json({
@@ -131,41 +169,50 @@ export async function GET(
       });
     }
 
-    // -----------------------------------------
+    // =================================================
     // SEND INTERVAL
-    // -----------------------------------------
+    // =================================================
 
     const sendInterval =
-      typeof device.sendInterval === "number" &&
-      device.sendInterval >= 1000
+      typeof device.sendInterval ===
+        "number" &&
+      device.sendInterval >=
+        1000
         ? device.sendInterval
         : DEFAULT_CONFIG.sendInterval;
 
-    // -----------------------------------------
+    // =================================================
     // SENSORS
-    // -----------------------------------------
+    // =================================================
 
     const sensors =
-      Array.isArray(device.sensors) &&
+      Array.isArray(
+        device.sensors
+      ) &&
       device.sensors.length > 0
-        ? device.sensors.map((sensor) => ({
-            slot: sensor.slot,
+        ? device.sensors.map(
+            (sensor) => ({
+              slot:
+                sensor.slot,
 
-            type:
-              sensor.type || "N/A",
+              type:
+                sensor.type ||
+                "N/A",
 
-            name:
-              sensor.name ||
-              `Sensor #${sensor.slot}`,
+              name:
+                sensor.name ||
+                `Sensor #${sensor.slot}`,
 
-            unit:
-              sensor.unit || "",
-          }))
+              unit:
+                sensor.unit ||
+                "",
+            })
+          )
         : DEFAULT_CONFIG.sensors;
 
-    // -----------------------------------------
+    // =================================================
     // RESPONSE
-    // -----------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
@@ -209,19 +256,48 @@ export async function PUT(
   {
     params,
   }: {
-    params: Promise<{ id: string }>;
+    params: Promise<{
+      id: string;
+    }>;
   }
 ) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
 
-    const { id } = await params;
+    const { id } =
+      await params;
 
     if (!id) {
       return NextResponse.json(
         {
           success: false,
-          error: "Device ID is required",
+          error:
+            "Device ID is required",
         },
         {
           status: 400,
@@ -229,11 +305,12 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // READ BODY
-    // -----------------------------------------
+    // =================================================
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       deviceName,
@@ -247,18 +324,20 @@ export async function PUT(
         id,
         deviceName,
         sendInterval,
-        sensorCount: Array.isArray(sensors)
-          ? sensors.length
-          : 0,
+        sensorCount:
+          Array.isArray(sensors)
+            ? sensors.length
+            : 0,
       }
     );
 
-    // -----------------------------------------
+    // =================================================
     // VALIDATE DEVICE NAME
-    // -----------------------------------------
+    // =================================================
 
     if (
-      typeof deviceName !== "string" ||
+      typeof deviceName !==
+        "string" ||
       !deviceName.trim()
     ) {
       return NextResponse.json(
@@ -276,9 +355,25 @@ export async function PUT(
     const normalizedDeviceName =
       deviceName.trim();
 
-    // -----------------------------------------
+    if (
+      normalizedDeviceName.length >
+      100
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device name cannot exceed 100 characters",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
     // VALIDATE SEND INTERVAL
-    // -----------------------------------------
+    // =================================================
 
     const normalizedInterval =
       Number(sendInterval);
@@ -287,7 +382,8 @@ export async function PUT(
       !Number.isFinite(
         normalizedInterval
       ) ||
-      normalizedInterval < 1000
+      normalizedInterval <
+        1000
     ) {
       return NextResponse.json(
         {
@@ -301,11 +397,13 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // VALIDATE SENSORS
-    // -----------------------------------------
+    // =================================================
 
-    if (!Array.isArray(sensors)) {
+    if (
+      !Array.isArray(sensors)
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -318,16 +416,17 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // NORMALIZE SENSORS
-    // -----------------------------------------
+    // =================================================
 
     const normalizedSensors =
       sensors
         .filter(
           (sensor) =>
             sensor !== null &&
-            typeof sensor === "object"
+            typeof sensor ===
+              "object"
         )
         .map((sensor) => ({
           slot: Number(
@@ -361,12 +460,13 @@ export async function PUT(
             sensor.slot <= 8
         );
 
-    // -----------------------------------------
+    // =================================================
     // REQUIRE ALL 8 SLOTS
-    // -----------------------------------------
+    // =================================================
 
     if (
-      normalizedSensors.length !== 8
+      normalizedSensors.length !==
+      8
     ) {
       return NextResponse.json(
         {
@@ -380,13 +480,14 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // CHECK DUPLICATE SLOTS
-    // -----------------------------------------
+    // =================================================
 
     const slots =
       normalizedSensors.map(
-        (sensor) => sensor.slot
+        (sensor) =>
+          sensor.slot
       );
 
     const uniqueSlots =
@@ -408,9 +509,9 @@ export async function PUT(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // FIND EXISTING DEVICE
-    // -----------------------------------------
+    // =================================================
 
     let device =
       await Device.findOne({
@@ -418,21 +519,28 @@ export async function PUT(
       }).lean();
 
     let query:
-      | { deviceId: string }
-      | { _id: string };
+      | {
+          deviceId: string;
+        }
+      | {
+          _id: string;
+        };
 
     if (device) {
       query = {
-        deviceId: device.deviceId,
+        deviceId:
+          device.deviceId,
       };
     } else {
-      // -----------------------------------------
+      // ===============================================
       // TRY MONGODB OBJECT ID
-      // -----------------------------------------
+      // ===============================================
 
       try {
         const byMongoId =
-          await Device.findById(id).lean();
+          await Device.findById(
+            id
+          ).lean();
 
         if (!byMongoId) {
           return NextResponse.json(
@@ -447,7 +555,8 @@ export async function PUT(
           );
         }
 
-        device = byMongoId;
+        device =
+          byMongoId;
 
         query = {
           _id: id,
@@ -466,9 +575,9 @@ export async function PUT(
       }
     }
 
-    // -----------------------------------------
+    // =================================================
     // UPDATE DATABASE ATOMICALLY
-    // -----------------------------------------
+    // =================================================
 
     const updatedDevice =
       await Device.findOneAndUpdate(
@@ -494,9 +603,9 @@ export async function PUT(
         }
       ).lean();
 
-    // -----------------------------------------
+    // =================================================
     // VERIFY UPDATE
-    // -----------------------------------------
+    // =================================================
 
     if (!updatedDevice) {
       return NextResponse.json(
@@ -510,6 +619,10 @@ export async function PUT(
         }
       );
     }
+
+    // =================================================
+    // LOG
+    // =================================================
 
     console.log(
       "[device-config] DATABASE UPDATED:",
@@ -528,9 +641,9 @@ export async function PUT(
       }
     );
 
-    // -----------------------------------------
+    // =================================================
     // RESPONSE
-    // -----------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
@@ -548,7 +661,8 @@ export async function PUT(
         updatedDevice.sendInterval,
 
       sensors:
-        updatedDevice.sensors ?? [],
+        updatedDevice.sensors ??
+        [],
     });
   } catch (error) {
     console.error(

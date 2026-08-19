@@ -1,11 +1,51 @@
-import { NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { auth } from "@/lib/auth";
 
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 
-export async function GET() {
+// =====================================================
+// GET DEVICES
+// =====================================================
+
+export async function GET(
+  request: NextRequest
+) {
   try {
+    // =================================================
+    // AUTHENTICATION
+    // =================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DATABASE
+    // =================================================
+
     await connectDB();
+
+    // =================================================
+    // LOAD DEVICES
+    // =================================================
 
     const devices =
       await Device.find()
@@ -13,6 +53,10 @@ export async function GET() {
           lastSeen: -1,
         })
         .lean();
+
+    // =================================================
+    // ONLINE STATUS
+    // =================================================
 
     const now =
       Date.now();
@@ -80,8 +124,13 @@ export async function GET() {
         }
       );
 
+    // =================================================
+    // RESPONSE
+    // =================================================
+
     return NextResponse.json({
       success: true,
+
       devices: result,
     });
   } catch (error) {

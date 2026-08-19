@@ -1,4 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { auth } from "@/lib/auth";
 
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
@@ -11,11 +16,42 @@ export async function GET(
   {
     params,
   }: {
-    params: Promise<{ id: string }>;
+    params: Promise<{
+      id: string;
+    }>;
   }
 ) {
   try {
+    // =====================================================
+    // AUTHENTICATION
+    // =====================================================
+
+    const session =
+      await auth.api.getSession({
+        headers: request.headers,
+      });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =====================================================
+    // DATABASE
+    // =====================================================
+
     await connectDB();
+
+    // =====================================================
+    // DEVICE ID
+    // =====================================================
 
     const { id } = await params;
 
@@ -23,7 +59,8 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: "Device ID is required",
+          error:
+            "Device ID is required",
         },
         {
           status: 400,
@@ -32,28 +69,39 @@ export async function GET(
     }
 
     // =====================================================
-    // FIND DEVICE
+    // FIND DEVICE BY DEVICE ID
     // =====================================================
 
-    let device = await Device.findOne({
-      deviceId: id,
-    }).lean();
+    let device =
+      await Device.findOne({
+        deviceId: id,
+      }).lean();
 
-    // Also support MongoDB _id
+    // =====================================================
+    // ALSO SUPPORT MONGODB _ID
+    // =====================================================
+
     if (!device) {
       try {
         device =
-          await Device.findById(id).lean();
+          await Device.findById(
+            id
+          ).lean();
       } catch {
         // Invalid MongoDB ObjectId.
       }
     }
 
+    // =====================================================
+    // DEVICE NOT FOUND
+    // =====================================================
+
     if (!device) {
       return NextResponse.json(
         {
           success: false,
-          error: "Device not found",
+          error:
+            "Device not found",
         },
         {
           status: 404,
@@ -70,8 +118,9 @@ export async function GET(
 
     const requestedLimit =
       Number(
-        searchParams.get("limit") ||
-          "100"
+        searchParams.get(
+          "limit"
+        ) || "100"
       );
 
     const limit = Math.min(
@@ -92,14 +141,12 @@ export async function GET(
     // TIME RANGE
     //
     // Supported:
-    //
     // 1h
     // 6h
     // 24h
     // 7d
     // 30d
     // all
-    //
     // =====================================================
 
     const range =
@@ -117,52 +164,59 @@ export async function GET(
 
     switch (range) {
       case "1h":
-        fromDate = new Date(
-          now -
-            60 * 60 * 1000
-        );
+        fromDate =
+          new Date(
+            now -
+              60 *
+                60 *
+                1000
+          );
         break;
 
       case "6h":
-        fromDate = new Date(
-          now -
-            6 *
-              60 *
-              60 *
-              1000
-        );
+        fromDate =
+          new Date(
+            now -
+              6 *
+                60 *
+                60 *
+                1000
+          );
         break;
 
       case "24h":
-        fromDate = new Date(
-          now -
-            24 *
-              60 *
-              60 *
-              1000
-        );
+        fromDate =
+          new Date(
+            now -
+              24 *
+                60 *
+                60 *
+                1000
+          );
         break;
 
       case "7d":
-        fromDate = new Date(
-          now -
-            7 *
-              24 *
-              60 *
-              60 *
-              1000
-        );
+        fromDate =
+          new Date(
+            now -
+              7 *
+                24 *
+                60 *
+                60 *
+                1000
+          );
         break;
 
       case "30d":
-        fromDate = new Date(
-          now -
-            30 *
-              24 *
-              60 *
-              60 *
-              1000
-        );
+        fromDate =
+          new Date(
+            now -
+              30 *
+                24 *
+                60 *
+                60 *
+                1000
+          );
         break;
 
       case "all":
@@ -190,6 +244,7 @@ export async function GET(
 
     const query: {
       deviceId: string;
+
       createdAt?: {
         $gte: Date;
       };
@@ -207,8 +262,11 @@ export async function GET(
     // =====================================================
     // LOAD TELEMETRY
     //
-    // Newest first from MongoDB.
-    // Reverse afterward for charts.
+    // MongoDB:
+    // newest → oldest
+    //
+    // Frontend:
+    // oldest → newest
     // =====================================================
 
     const logs =
@@ -221,7 +279,6 @@ export async function GET(
         .limit(limit)
         .lean();
 
-    // Oldest → newest
     logs.reverse();
 
     // =====================================================
