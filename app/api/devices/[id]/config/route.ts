@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 
+// =====================================================
+// DEFAULT CONFIGURATION
+// =====================================================
+
 const DEFAULT_CONFIG = {
   sendInterval: 10000,
 
@@ -45,21 +49,21 @@ const DEFAULT_CONFIG = {
     },
     {
       slot: 7,
-      type: "DHT_HUMIDITY",
-      name: "AM2302 Humidity",
-      unit: "%",
+      type: "DHT_TEMPERATURE",
+      name: "AM2302 Temperature",
+      unit: "°C",
     },
     {
       slot: 8,
-      type: "N/A",
-      name: "Unused",
-      unit: "",
+      type: "DHT_HUMIDITY",
+      name: "AM2302 Humidity",
+      unit: "%",
     },
   ],
 };
 
 // =====================================================
-// GET DEVICE CONFIGURATION
+// GET CONFIGURATION
 // =====================================================
 
 export async function GET(
@@ -128,7 +132,7 @@ export async function GET(
     }
 
     // -----------------------------------------
-    // DATABASE CONFIG
+    // SEND INTERVAL
     // -----------------------------------------
 
     const sendInterval =
@@ -137,23 +141,26 @@ export async function GET(
         ? device.sendInterval
         : DEFAULT_CONFIG.sendInterval;
 
+    // -----------------------------------------
+    // SENSORS
+    // -----------------------------------------
+
     const sensors =
       Array.isArray(device.sensors) &&
       device.sensors.length > 0
-        ? device.sensors.map(
-            (sensor) => ({
-              slot: sensor.slot,
+        ? device.sensors.map((sensor) => ({
+            slot: sensor.slot,
 
-              type: sensor.type,
+            type:
+              sensor.type || "N/A",
 
-              name:
-                sensor.name ||
-                `Sensor #${sensor.slot}`,
+            name:
+              sensor.name ||
+              `Sensor #${sensor.slot}`,
 
-              unit:
-                sensor.unit || "",
-            })
-          )
+            unit:
+              sensor.unit || "",
+          }))
         : DEFAULT_CONFIG.sensors;
 
     // -----------------------------------------
@@ -194,7 +201,7 @@ export async function GET(
 }
 
 // =====================================================
-// PUT DEVICE CONFIGURATION
+// PUT CONFIGURATION
 // =====================================================
 
 export async function PUT(
@@ -223,7 +230,7 @@ export async function PUT(
     }
 
     // -----------------------------------------
-    // READ REQUEST BODY
+    // READ BODY
     // -----------------------------------------
 
     const body = await request.json();
@@ -234,25 +241,40 @@ export async function PUT(
       sensors,
     } = body;
 
+    console.log(
+      "[device-config] PUT request:",
+      {
+        id,
+        deviceName,
+        sendInterval,
+        sensorCount: Array.isArray(sensors)
+          ? sensors.length
+          : 0,
+      }
+    );
+
     // -----------------------------------------
     // VALIDATE DEVICE NAME
     // -----------------------------------------
 
     if (
-      deviceName !== undefined &&
-      typeof deviceName !== "string"
+      typeof deviceName !== "string" ||
+      !deviceName.trim()
     ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "deviceName must be a string",
+            "Device name is required",
         },
         {
           status: 400,
         }
       );
     }
+
+    const normalizedDeviceName =
+      deviceName.trim();
 
     // -----------------------------------------
     // VALIDATE SEND INTERVAL
@@ -271,7 +293,7 @@ export async function PUT(
         {
           success: false,
           error:
-            "sendInterval must be at least 1000 ms",
+            "Send interval must be at least 1000 ms",
         },
         {
           status: 400,
@@ -280,7 +302,7 @@ export async function PUT(
     }
 
     // -----------------------------------------
-    // VALIDATE SENSOR ARRAY
+    // VALIDATE SENSORS
     // -----------------------------------------
 
     if (!Array.isArray(sensors)) {
@@ -288,7 +310,7 @@ export async function PUT(
         {
           success: false,
           error:
-            "sensors must be an array",
+            "Sensors must be an array",
         },
         {
           status: 400,
@@ -340,6 +362,25 @@ export async function PUT(
         );
 
     // -----------------------------------------
+    // REQUIRE ALL 8 SLOTS
+    // -----------------------------------------
+
+    if (
+      normalizedSensors.length !== 8
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Exactly 8 sensor slots are required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // -----------------------------------------
     // CHECK DUPLICATE SLOTS
     // -----------------------------------------
 
@@ -368,78 +409,123 @@ export async function PUT(
     }
 
     // -----------------------------------------
-    // FIND DEVICE BY DEVICE ID
+    // FIND EXISTING DEVICE
     // -----------------------------------------
 
     let device =
       await Device.findOne({
         deviceId: id,
-      });
+      }).lean();
 
-    // -----------------------------------------
-    // ALSO SUPPORT MONGODB _id
-    // -----------------------------------------
+    let query:
+      | { deviceId: string }
+      | { _id: string };
 
-    if (!device) {
+    if (device) {
+      query = {
+        deviceId: device.deviceId,
+      };
+    } else {
+      // -----------------------------------------
+      // TRY MONGODB OBJECT ID
+      // -----------------------------------------
+
       try {
-        device =
-          await Device.findById(id);
+        const byMongoId =
+          await Device.findById(id).lean();
+
+        if (!byMongoId) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "Device not found",
+            },
+            {
+              status: 404,
+            }
+          );
+        }
+
+        device = byMongoId;
+
+        query = {
+          _id: id,
+        };
       } catch {
-        // Not a valid MongoDB ObjectId.
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Device not found",
+          },
+          {
+            status: 404,
+          }
+        );
       }
     }
 
     // -----------------------------------------
-    // DEVICE NOT FOUND
+    // UPDATE DATABASE ATOMICALLY
     // -----------------------------------------
 
-    if (!device) {
+    const updatedDevice =
+      await Device.findOneAndUpdate(
+        query,
+
+        {
+          $set: {
+            name:
+              normalizedDeviceName,
+
+            sendInterval:
+              normalizedInterval,
+
+            sensors:
+              normalizedSensors,
+          },
+        },
+
+        {
+          new: true,
+
+          runValidators: true,
+        }
+      ).lean();
+
+    // -----------------------------------------
+    // VERIFY UPDATE
+    // -----------------------------------------
+
+    if (!updatedDevice) {
       return NextResponse.json(
         {
           success: false,
-          error: "Device not found",
+          error:
+            "Failed to update device",
         },
         {
-          status: 404,
+          status: 500,
         }
       );
     }
 
-    // -----------------------------------------
-    // UPDATE DEVICE NAME
-    // -----------------------------------------
-
-    if (
-      typeof deviceName ===
-        "string" &&
-      deviceName.trim()
-    ) {
-      device.name =
-        deviceName.trim();
-    }
-
-    // -----------------------------------------
-    // UPDATE SEND INTERVAL
-    // -----------------------------------------
-
-    device.sendInterval =
-      normalizedInterval;
-
-    // -----------------------------------------
-    // UPDATE SENSOR CONFIGURATION
-    // -----------------------------------------
-
-    device.sensors =
-      normalizedSensors;
-
-    // -----------------------------------------
-    // SAVE
-    // -----------------------------------------
-
-    await device.save();
-
     console.log(
-      `[device-config] Updated configuration for ${device.deviceId}`
+      "[device-config] DATABASE UPDATED:",
+      {
+        deviceId:
+          updatedDevice.deviceId,
+
+        name:
+          updatedDevice.name,
+
+        sendInterval:
+          updatedDevice.sendInterval,
+
+        sensors:
+          updatedDevice.sensors,
+      }
     );
 
     // -----------------------------------------
@@ -453,16 +539,16 @@ export async function PUT(
         "Device configuration updated",
 
       deviceId:
-        device.deviceId,
+        updatedDevice.deviceId,
 
       deviceName:
-        device.name,
+        updatedDevice.name,
 
       sendInterval:
-        device.sendInterval,
+        updatedDevice.sendInterval,
 
       sensors:
-        device.sensors,
+        updatedDevice.sensors ?? [],
     });
   } catch (error) {
     console.error(
