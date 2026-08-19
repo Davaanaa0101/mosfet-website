@@ -9,8 +9,12 @@ export const auth = betterAuth({
     client,
   }),
 
-  secret: process.env.AUTH_SECRET!,
-  baseURL: process.env.AUTH_URL!,
+  secret:
+    process.env.AUTH_SECRET!,
+
+  baseURL:
+    process.env.AUTH_URL ||
+    "https://mosfet.mn",
 
   emailAndPassword: {
     enabled: true,
