@@ -44,12 +44,20 @@ export default function RegisterPage() {
   const [loading, setLoading] =
     useState(false);
 
+  // =====================================================
+  // SUBMIT
+  // =====================================================
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
     setError(null);
+
+    // ---------------------------------------------------
+    // VALIDATION
+    // ---------------------------------------------------
 
     if (!name.trim()) {
       setError(
@@ -92,6 +100,15 @@ export default function RegisterPage() {
     try {
       setLoading(true);
 
+      // =================================================
+      // STEP 1
+      // CREATE BETTER AUTH ACCOUNT
+      //
+      // IMPORTANT:
+      // Only use fields supported by the current
+      // Better Auth client types.
+      // =================================================
+
       const result =
         await signUp.email({
           name: name.trim(),
@@ -99,13 +116,18 @@ export default function RegisterPage() {
           email: email.trim(),
 
           password,
-
-          phone: phone.trim(),
-
-          company: company.trim(),
         });
 
+      // ---------------------------------------------------
+      // BETTER AUTH ERROR
+      // ---------------------------------------------------
+
       if (result.error) {
+        console.error(
+          "[Register] Better Auth error:",
+          result.error
+        );
+
         setError(
           result.error.message ||
             "Unable to create account."
@@ -113,6 +135,93 @@ export default function RegisterPage() {
 
         return;
       }
+
+      // =================================================
+      // STEP 2
+      // SAVE EXTRA PROFILE INFORMATION
+      //
+      // The successful signUp creates the session.
+      // Now /api/profile can identify the logged-in user.
+      // =================================================
+
+      const profileResponse =
+        await fetch(
+          "/api/profile",
+          {
+            method: "PUT",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Accept:
+                "application/json",
+            },
+
+            cache: "no-store",
+
+            body: JSON.stringify({
+              name:
+                name.trim(),
+
+              phone:
+                phone.trim(),
+
+              company:
+                company.trim(),
+            }),
+          }
+        );
+
+      // ---------------------------------------------------
+      // READ RESPONSE SAFELY
+      // ---------------------------------------------------
+
+      let profileResult:
+        | {
+            success?: boolean;
+            error?: string;
+          }
+        | null = null;
+
+      try {
+        profileResult =
+          await profileResponse.json();
+      } catch {
+        profileResult = null;
+      }
+
+      // ---------------------------------------------------
+      // PROFILE ERROR
+      // ---------------------------------------------------
+
+      if (
+        !profileResponse.ok ||
+        !profileResult?.success
+      ) {
+        console.error(
+          "[Register] Profile update failed:",
+          profileResult
+        );
+
+        /*
+         * The Better Auth account has already been created.
+         *
+         * Do not tell the user that registration failed.
+         *
+         * We can still send them to the dashboard and
+         * fix/update their profile later.
+         */
+
+        console.warn(
+          "[Register] Account created, but profile fields could not be saved."
+        );
+      }
+
+      // =================================================
+      // STEP 3
+      // GO TO DASHBOARD
+      // =================================================
 
       window.location.href =
         "/dashboard";
@@ -123,17 +232,26 @@ export default function RegisterPage() {
       );
 
       setError(
-        "Unable to create account. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Unable to create account. Please try again."
       );
     } finally {
       setLoading(false);
     }
   }
 
+  // =====================================================
+  // RENDER
+  // =====================================================
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-lg">
+
+        {/* ================================================= */}
         {/* HEADER */}
+        {/* ================================================= */}
 
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
@@ -149,9 +267,12 @@ export default function RegisterPage() {
           </p>
         </div>
 
+        {/* ================================================= */}
         {/* CARD */}
+        {/* ================================================= */}
 
         <div className="rounded-xl border bg-background p-6 shadow-sm">
+
           <div className="mb-6">
             <h2 className="text-xl font-semibold">
               Create account
@@ -162,7 +283,9 @@ export default function RegisterPage() {
             </p>
           </div>
 
+          {/* ================================================= */}
           {/* ERROR */}
+          {/* ================================================= */}
 
           {error && (
             <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3">
@@ -172,13 +295,20 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {/* ================================================= */}
+          {/* FORM */}
+          {/* ================================================= */}
+
           <form
             onSubmit={
               handleSubmit
             }
             className="space-y-5"
           >
+
+            {/* ================================================= */}
             {/* NAME */}
+            {/* ================================================= */}
 
             <Field
               id="name"
@@ -187,12 +317,17 @@ export default function RegisterPage() {
                 <User className="h-4 w-4" />
               }
               value={name}
-              onChange={setName}
+              onChange={
+                setName
+              }
               placeholder="Your name"
               disabled={loading}
+              autoComplete="name"
             />
 
+            {/* ================================================= */}
             {/* EMAIL */}
+            {/* ================================================= */}
 
             <Field
               id="email"
@@ -202,12 +337,17 @@ export default function RegisterPage() {
               }
               type="email"
               value={email}
-              onChange={setEmail}
+              onChange={
+                setEmail
+              }
               placeholder="you@example.com"
               disabled={loading}
+              autoComplete="email"
             />
 
+            {/* ================================================= */}
             {/* PHONE */}
+            {/* ================================================= */}
 
             <Field
               id="phone"
@@ -217,12 +357,17 @@ export default function RegisterPage() {
               }
               type="tel"
               value={phone}
-              onChange={setPhone}
+              onChange={
+                setPhone
+              }
               placeholder="+976 99112233"
               disabled={loading}
+              autoComplete="tel"
             />
 
+            {/* ================================================= */}
             {/* COMPANY */}
+            {/* ================================================= */}
 
             <Field
               id="company"
@@ -231,12 +376,17 @@ export default function RegisterPage() {
                 <Building2 className="h-4 w-4" />
               }
               value={company}
-              onChange={setCompany}
+              onChange={
+                setCompany
+              }
               placeholder="Company name"
               disabled={loading}
+              autoComplete="organization"
             />
 
+            {/* ================================================= */}
             {/* PASSWORD */}
+            {/* ================================================= */}
 
             <Field
               id="password"
@@ -251,9 +401,12 @@ export default function RegisterPage() {
               }
               placeholder="Minimum 8 characters"
               disabled={loading}
+              autoComplete="new-password"
             />
 
+            {/* ================================================= */}
             {/* CONFIRM PASSWORD */}
+            {/* ================================================= */}
 
             <Field
               id="confirm-password"
@@ -270,9 +423,12 @@ export default function RegisterPage() {
               }
               placeholder="Repeat your password"
               disabled={loading}
+              autoComplete="new-password"
             />
 
+            {/* ================================================= */}
             {/* SUBMIT */}
+            {/* ================================================= */}
 
             <button
               type="submit"
@@ -282,6 +438,7 @@ export default function RegisterPage() {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
+
                   Creating account...
                 </>
               ) : (
@@ -290,7 +447,9 @@ export default function RegisterPage() {
             </button>
           </form>
 
+          {/* ================================================= */}
           {/* LOGIN */}
+          {/* ================================================= */}
 
           <div className="mt-6 border-t pt-6 text-center">
             <p className="text-sm text-muted-foreground">
@@ -305,6 +464,14 @@ export default function RegisterPage() {
             </a>
           </div>
         </div>
+
+        {/* ================================================= */}
+        {/* FOOTER */}
+        {/* ================================================= */}
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          MOSFET Smart Building Platform
+        </p>
       </div>
     </main>
   );
@@ -323,17 +490,27 @@ function Field({
   onChange,
   placeholder,
   disabled,
+  autoComplete,
 }: {
   id: string;
+
   label: string;
+
   icon: React.ReactNode;
+
   type?: string;
+
   value: string;
+
   onChange: (
     value: string
   ) => void;
+
   placeholder?: string;
+
   disabled?: boolean;
+
+  autoComplete?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -353,7 +530,9 @@ function Field({
           id={id}
           type={type}
           value={value}
-          onChange={(event) =>
+          onChange={(
+            event
+          ) =>
             onChange(
               event.target.value
             )
@@ -362,6 +541,9 @@ function Field({
             placeholder
           }
           disabled={disabled}
+          autoComplete={
+            autoComplete
+          }
           className="w-full rounded-md border bg-background py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
         />
       </div>
