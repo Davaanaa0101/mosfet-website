@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  Cpu,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 
 import StatCard from "@/components/dashboard/StatCard";
 
@@ -115,18 +120,19 @@ export default function StatsGrid() {
       title: "Total Devices",
       value:
         stats?.totalDevices ?? 0,
+      icon: Cpu,
     },
-
     {
       title: "Online",
       value:
         stats?.onlineDevices ?? 0,
+      icon: Wifi,
     },
-
     {
       title: "Offline",
       value:
         stats?.offlineDevices ?? 0,
+      icon: WifiOff,
     },
   ];
 
@@ -141,6 +147,7 @@ export default function StatsGrid() {
               ? "..."
               : card.value
           }
+          icon={card.icon}
         />
       ))}
     </div>

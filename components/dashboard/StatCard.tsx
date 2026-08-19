@@ -6,6 +6,7 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import StatCard from "@/components/dashboard/StatCard";
 
@@ -27,6 +28,12 @@ interface SummaryResponse {
   error?: string;
 }
 
+interface DashboardCard {
+  title: string;
+  value: string | number;
+  icon: LucideIcon;
+}
+
 export default function StatsGrid() {
   const [stats, setStats] =
     useState<DashboardStats | null>(null);
@@ -37,60 +44,57 @@ export default function StatsGrid() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const loadStats = useCallback(
-    async () => {
-      try {
-        const response = await fetch(
-          "/api/dashboard/summary",
-          {
-            cache: "no-store",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            "Failed to load dashboard summary"
-          );
+  const loadStats = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "/api/dashboard/summary",
+        {
+          cache: "no-store",
         }
+      );
 
-        const result =
-          (await response.json()) as SummaryResponse;
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
-
-        const dashboardStats =
-          result.stats ?? {
-            totalDevices:
-              result.totalDevices ?? 0,
-
-            onlineDevices:
-              result.onlineDevices ?? 0,
-
-            offlineDevices:
-              result.offlineDevices ?? 0,
-          };
-
-        setStats(dashboardStats);
-        setError(null);
-      } catch (err) {
-        console.error(
-          "[StatsGrid]",
-          err
+      if (!response.ok) {
+        throw new Error(
+          "Failed to load dashboard summary"
         );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load dashboard"
-        );
-      } finally {
-        setLoading(false);
       }
-    },
-    []
-  );
+
+      const result =
+        (await response.json()) as SummaryResponse;
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      const dashboardStats =
+        result.stats ?? {
+          totalDevices:
+            result.totalDevices ?? 0,
+
+          onlineDevices:
+            result.onlineDevices ?? 0,
+
+          offlineDevices:
+            result.offlineDevices ?? 0,
+        };
+
+      setStats(dashboardStats);
+      setError(null);
+    } catch (err) {
+      console.error(
+        "[StatsGrid]",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load dashboard"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadStats();
@@ -115,7 +119,7 @@ export default function StatsGrid() {
     );
   }
 
-  const cards = [
+  const cards: DashboardCard[] = [
     {
       title: "Total Devices",
       value:
