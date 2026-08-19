@@ -13,6 +13,12 @@ const DEVICE_TYPES = [
 
 type DeviceType = (typeof DEVICE_TYPES)[number];
 
+interface IncomingSensor {
+  slot: number;
+  type: string;
+  value?: number | null;
+}
+
 function normalizeDeviceType(
   value: unknown
 ): DeviceType {
@@ -28,7 +34,37 @@ function normalizeDeviceType(
   return "esp32";
 }
 
-export async function POST(req: NextRequest) {
+function normalizeSensors(
+  value: unknown
+): IncomingSensor[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((sensor): sensor is IncomingSensor => {
+      return (
+        sensor !== null &&
+        typeof sensor === "object" &&
+        typeof (sensor as IncomingSensor).slot ===
+          "number" &&
+        typeof (sensor as IncomingSensor).type ===
+          "string"
+      );
+    })
+    .map((sensor) => ({
+      slot: sensor.slot,
+      type: sensor.type.trim(),
+      value:
+        typeof sensor.value === "number"
+          ? sensor.value
+          : null,
+    }));
+}
+
+export async function POST(
+  req: NextRequest
+) {
   try {
     await connectDB();
 
@@ -54,6 +90,9 @@ export async function POST(req: NextRequest) {
       rssi,
       freeHeap,
       uptime,
+
+      // NEW
+      sensors,
     } = body;
 
     // -----------------------------------------
@@ -96,6 +135,13 @@ export async function POST(req: NextRequest) {
 
     const normalizedType =
       normalizeDeviceType(type);
+
+    // -----------------------------------------
+    // NORMALIZE SENSORS
+    // -----------------------------------------
+
+    const normalizedSensors =
+      normalizeSensors(sensors);
 
     // -----------------------------------------
     // FIND DEVICE
@@ -266,7 +312,17 @@ export async function POST(req: NextRequest) {
         typeof uptime === "number"
           ? uptime
           : undefined,
+
+      // ---------------------------------------
+      // SENSOR ARRAY
+      // ---------------------------------------
+
+      sensors: normalizedSensors,
     });
+
+    console.log(
+      `[telemetry] ${normalizedDeviceId}: saved ${normalizedSensors.length} sensors`
+    );
 
     // -----------------------------------------
     // RESPONSE
@@ -276,7 +332,10 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "Telemetry received",
       deviceId: normalizedDeviceId,
-      timestamp: new Date().toISOString(),
+      sensorCount:
+        normalizedSensors.length,
+      timestamp:
+        new Date().toISOString(),
     });
   } catch (error) {
     console.error(

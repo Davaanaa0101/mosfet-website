@@ -4,12 +4,17 @@ import mongoose, {
   Document,
 } from "mongoose";
 
+export interface IDeviceSensor {
+  slot: number;
+  type: string;
+  value?: number | null;
+}
+
 export interface IDeviceLog extends Document {
   deviceId: string;
 
   temperature?: number;
   humidity?: number;
-
   voltage?: number;
   current?: number;
   power?: number;
@@ -22,74 +27,80 @@ export interface IDeviceLog extends Document {
   freeHeap?: number;
   uptime?: number;
 
+  sensors?: IDeviceSensor[];
+
   createdAt: Date;
 }
 
-const DeviceLogSchema = new Schema<IDeviceLog>(
-  {
-    deviceId: {
-      type: String,
-      required: true,
-      index: true,
-    },
+const DeviceSensorSchema =
+  new Schema<IDeviceSensor>(
+    {
+      slot: {
+        type: Number,
+        required: true,
+      },
 
-    temperature: {
-      type: Number,
-    },
+      type: {
+        type: String,
+        required: true,
+      },
 
-    humidity: {
-      type: Number,
+      value: {
+        type: Number,
+        default: null,
+      },
     },
+    {
+      _id: false,
+    }
+  );
 
-    voltage: {
-      type: Number,
-    },
+const DeviceLogSchema =
+  new Schema<IDeviceLog>(
+    {
+      deviceId: {
+        type: String,
+        required: true,
+        index: true,
+      },
 
-    current: {
-      type: Number,
-    },
+      temperature: Number,
 
-    power: {
-      type: Number,
-    },
+      humidity: Number,
 
-    energy: {
-      type: Number,
-    },
+      voltage: Number,
 
-    wifiSSID: {
-      type: String,
-    },
+      current: Number,
 
-    ipAddress: {
-      type: String,
-    },
+      power: Number,
 
-    rssi: {
-      type: Number,
-    },
+      energy: Number,
 
-    freeHeap: {
-      type: Number,
-    },
+      wifiSSID: String,
 
-    uptime: {
-      type: Number,
-    },
-  },
-  {
-    timestamps: {
-      createdAt: true,
-      updatedAt: false,
-    },
-  }
-);
+      ipAddress: String,
 
-const DeviceLog: Model<IDeviceLog> =
-  mongoose.models.DeviceLog ||
+      rssi: Number,
+
+      freeHeap: Number,
+
+      uptime: Number,
+
+      sensors: {
+        type: [DeviceSensorSchema],
+        default: [],
+      },
+    },
+    {
+      timestamps: {
+        createdAt: true,
+        updatedAt: false,
+      },
+    }
+  );
+
+export default (mongoose.models.DeviceLog ||
   mongoose.model<IDeviceLog>(
     "DeviceLog",
     DeviceLogSchema
-  );
-
-export default DeviceLog;
+  )) as Model<IDeviceLog>;
