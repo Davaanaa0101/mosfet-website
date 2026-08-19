@@ -1173,7 +1173,9 @@ export async function POST(
           false,
 
         error:
-          "Internal Server Error",
+          error instanceof Error
+          ? error.message
+          : String(error),
       },
       {
         status: 500,
