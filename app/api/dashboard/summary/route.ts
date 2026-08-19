@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
@@ -7,63 +8,122 @@ export async function GET() {
   try {
     await connectDB();
 
-    const totalDevices = await Device.countDocuments();
+    const devices = await Device.find()
+      .sort({ lastSeen: -1 })
+      .lean();
 
-    const onlineDevices = await Device.countDocuments({
-      status: "online",
-    });
+    const now = Date.now();
 
-    const offlineDevices = totalDevices - onlineDevices;
+    const onlineDevices = devices.filter(
+      (device) => {
+        if (!device.lastSeen) {
+          return false;
+        }
 
-    const stats = await DeviceLog.aggregate([
-        {
-            $sort: {
-            createdAt: -1,
-            },
-        },
-        {
-            $group: {
-            _id: "$deviceId",
-            temperature: {
-                $first: "$temperature",
-            },
-            humidity: {
-                $first: "$humidity",
-            },
-            },
-        },
-        {
-            $group: {
-            _id: null,
-            avgTemperature: {
-                $avg: "$temperature",
-            },
-            avgHumidity: {
-                $avg: "$humidity",
-            },
-            },
-        },
-    ]);
+        const lastSeen =
+          new Date(
+            device.lastSeen
+          ).getTime();
 
-    const latestDevices = await Device.find()
-      .sort({ updatedAt: -1 })
-      .limit(5);
+        return (
+          !Number.isNaN(lastSeen) &&
+          now - lastSeen <= 30_000
+        );
+      }
+    );
+
+    const offlineDevices =
+      devices.filter(
+        (device) =>
+          !onlineDevices.some(
+            (online) =>
+              String(online._id) ===
+              String(device._id)
+          )
+      );
+
+    // Get latest telemetry for each device
+    const latestTelemetry =
+      await Promise.all(
+        devices.map(async (device) => {
+          const telemetry =
+            await DeviceLog.findOne({
+              deviceId:
+                device.deviceId,
+            })
+              .sort({
+                createdAt: -1,
+              })
+              .lean();
+
+          return {
+            deviceId:
+              device.deviceId,
+
+            deviceName:
+              device.name ||
+              device.deviceId,
+
+            status:
+              onlineDevices.some(
+                (online) =>
+                  String(
+                    online._id
+                  ) ===
+                  String(device._id)
+              )
+                ? "online"
+                : "offline",
+
+            ipAddress:
+              device.ipAddress || "",
+
+            lastSeen:
+              device.lastSeen,
+
+            telemetry,
+          };
+        })
+      );
+
+    // Latest activity
+    const recentActivity =
+      await DeviceLog.find()
+        .sort({
+          createdAt: -1,
+        })
+        .limit(10)
+        .lean();
 
     return NextResponse.json({
-      totalDevices,
-      onlineDevices,
-      offlineDevices,
-      alerts: 0,
-      avgTemperature: stats[0]?.avgTemperature ?? 0,
-      avgHumidity: stats[0]?.avgHumidity ?? 0,
-      latestDevices,
+      success: true,
+
+      stats: {
+        totalDevices:
+          devices.length,
+
+        onlineDevices:
+          onlineDevices.length,
+
+        offlineDevices:
+          offlineDevices.length,
+      },
+
+      devices: latestTelemetry,
+
+      recentActivity,
     });
   } catch (error) {
-    console.error(error);
+    console.error(
+      "[dashboard] Error:",
+      error
+    );
 
     return NextResponse.json(
       {
-        error: "Failed to load dashboard",
+        success: false,
+        error:
+          "Failed to load dashboard",
       },
       {
         status: 500,
