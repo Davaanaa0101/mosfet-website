@@ -11,43 +11,54 @@ export async function GET() {
     await connectDB();
 
     // =====================================================
+    // CURRENT TIME
+    // =====================================================
+
+    const now = Date.now();
+
+    // =====================================================
     // LOAD DEVICES
     // =====================================================
 
     const devices = await Device.find()
-      .sort({ lastSeen: -1 })
+      .sort({
+        lastSeen: -1,
+      })
       .lean();
-
-    const now = Date.now();
 
     // =====================================================
     // ONLINE / OFFLINE
     // =====================================================
 
-    const onlineDevices = devices.filter(
-      (device) => {
-        if (!device.lastSeen) {
-          return false;
+    const onlineDevices =
+      devices.filter(
+        (device) => {
+          if (!device.lastSeen) {
+            return false;
+          }
+
+          const lastSeen =
+            new Date(
+              device.lastSeen
+            ).getTime();
+
+          return (
+            !Number.isNaN(
+              lastSeen
+            ) &&
+            now - lastSeen <=
+              ONLINE_THRESHOLD_MS
+          );
         }
+      );
 
-        const lastSeen =
-          new Date(
-            device.lastSeen
-          ).getTime();
-
-        return (
-          !Number.isNaN(lastSeen) &&
-          now - lastSeen <=
-            ONLINE_THRESHOLD_MS
-        );
-      }
-    );
-
-    const onlineIds = new Set(
-      onlineDevices.map((device) =>
-        String(device._id)
-      )
-    );
+    const onlineIds =
+      new Set(
+        onlineDevices.map(
+          (device) =>
+            String(device._id)
+        )
+      );
 
     const offlineDevices =
       devices.filter(
@@ -58,67 +69,120 @@ export async function GET() {
       );
 
     // =====================================================
-    // LATEST TELEMETRY PER DEVICE
+    // GET LATEST TELEMETRY FOR ALL DEVICES
+    //
+    // ONE DATABASE QUERY
     // =====================================================
 
     const latestTelemetry =
-      await Promise.all(
-        devices.map(
-          async (device) => {
-            const telemetry =
-              await DeviceLog.findOne({
-                deviceId:
-                  device.deviceId,
-              })
-                .sort({
-                  createdAt: -1,
-                })
-                .lean();
+      devices.length > 0
+        ? await DeviceLog.aggregate([
+            // ---------------------------------------------
+            // Sort newest first
+            // ---------------------------------------------
 
-            return {
-              deviceId:
-                device.deviceId,
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
 
-              // IMPORTANT:
-              // Always use configured device name
-              deviceName:
-                device.name ||
-                device.deviceId,
+            // ---------------------------------------------
+            // First record for each device is newest
+            // ---------------------------------------------
 
-              status:
-                onlineIds.has(
-                  String(
-                    device._id
-                  )
+            {
+              $group: {
+                _id: "$deviceId",
+
+                telemetry: {
+                  $first: "$$ROOT",
+                },
+              },
+            },
+          ])
+        : [];
+
+    // =====================================================
+    // CREATE TELEMETRY MAP
+    // =====================================================
+
+    const telemetryMap =
+      new Map<
+        string,
+        Record<string, unknown>
+      >();
+
+    for (
+      const item of latestTelemetry
+    ) {
+      if (
+        item?._id &&
+        item?.telemetry
+      ) {
+        telemetryMap.set(
+          String(item._id),
+          item.telemetry
+        );
+      }
+    }
+
+    // =====================================================
+    // BUILD DEVICE DATA
+    // =====================================================
+
+    const dashboardDevices =
+      devices.map(
+        (device) => {
+          const telemetry =
+            telemetryMap.get(
+              device.deviceId
+            ) || null;
+
+          return {
+            deviceId:
+              device.deviceId,
+
+            // IMPORTANT:
+            // Configuration/database owns name.
+            deviceName:
+              device.name ||
+              device.deviceId,
+
+            status:
+              onlineIds.has(
+                String(
+                  device._id
                 )
-                  ? "online"
-                  : "offline",
+              )
+                ? "online"
+                : "offline",
 
-              ipAddress:
-                device.ipAddress ||
-                "",
+            ipAddress:
+              device.ipAddress ||
+              "",
 
-              location:
-                device.location ||
-                "",
+            location:
+              device.location ||
+              "",
 
-              type:
-                device.type ||
-                "esp32",
+            type:
+              device.type ||
+              "esp32",
 
-              lastSeen:
-                device.lastSeen ||
-                null,
+            lastSeen:
+              device.lastSeen ||
+              null,
 
-              telemetry:
-                telemetry || null,
-            };
-          }
-        )
+            telemetry,
+          };
+        }
       );
 
     // =====================================================
     // RECENT ACTIVITY
+    //
+    // Only 10 records required.
     // =====================================================
 
     const rawActivity =
@@ -130,7 +194,7 @@ export async function GET() {
         .lean();
 
     // =====================================================
-    // ADD DEVICE NAME TO ACTIVITY
+    // DEVICE NAME MAP
     // =====================================================
 
     const deviceNameMap =
@@ -143,6 +207,10 @@ export async function GET() {
           ]
         )
       );
+
+    // =====================================================
+    // FORMAT RECENT ACTIVITY
+    // =====================================================
 
     const recentActivity =
       rawActivity.map(
@@ -219,7 +287,7 @@ export async function GET() {
       },
 
       devices:
-        latestTelemetry,
+        dashboardDevices,
 
       recentActivity,
     });
