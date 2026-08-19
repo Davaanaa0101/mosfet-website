@@ -108,8 +108,7 @@ export async function POST(
 
     if (
       !deviceId ||
-      typeof deviceId !==
-        "string"
+      typeof deviceId !== "string"
     ) {
       return NextResponse.json(
         {
@@ -126,9 +125,7 @@ export async function POST(
     const normalizedDeviceId =
       deviceId.trim();
 
-    if (
-      !normalizedDeviceId
-    ) {
+    if (!normalizedDeviceId) {
       return NextResponse.json(
         {
           success: false,
@@ -188,8 +185,7 @@ export async function POST(
             normalizedDeviceId,
 
           name:
-            typeof name ===
-              "string" &&
+            typeof name === "string" &&
             name.trim()
               ? name.trim()
               : normalizedDeviceId,
@@ -198,26 +194,22 @@ export async function POST(
             normalizedType,
 
           location:
-            typeof location ===
-            "string"
+            typeof location === "string"
               ? location.trim()
               : "",
 
           macAddress:
-            typeof macAddress ===
-            "string"
+            typeof macAddress === "string"
               ? macAddress.trim()
               : "",
 
           firmware:
-            typeof firmware ===
-            "string"
+            typeof firmware === "string"
               ? firmware.trim()
               : "",
 
           ipAddress:
-            typeof ipAddress ===
-            "string"
+            typeof ipAddress === "string"
               ? ipAddress.trim()
               : "",
 
@@ -233,7 +225,7 @@ export async function POST(
     }
 
     // =================================================
-    // UPDATE DEVICE
+    // UPDATE EXISTING DEVICE
     // =================================================
 
     else {
@@ -244,8 +236,7 @@ export async function POST(
         new Date();
 
       if (
-        typeof name ===
-          "string" &&
+        typeof name === "string" &&
         name.trim()
       ) {
         device.name =
@@ -256,8 +247,7 @@ export async function POST(
         normalizedType;
 
       if (
-        typeof location ===
-          "string" &&
+        typeof location === "string" &&
         location.trim()
       ) {
         device.location =
@@ -274,8 +264,7 @@ export async function POST(
       }
 
       if (
-        typeof firmware ===
-          "string" &&
+        typeof firmware === "string" &&
         firmware.trim()
       ) {
         device.firmware =
@@ -283,8 +272,7 @@ export async function POST(
       }
 
       if (
-        typeof ipAddress ===
-          "string" &&
+        typeof ipAddress === "string" &&
         ipAddress.trim()
       ) {
         device.ipAddress =
@@ -293,6 +281,20 @@ export async function POST(
 
       await device.save();
     }
+
+    // =================================================
+    // IMPORTANT
+    // =================================================
+    // At this point device has been either:
+    //
+    // 1. Found in MongoDB
+    // 2. Created in MongoDB
+    //
+    // So create a guaranteed non-null reference.
+    // =================================================
+
+    const currentDevice =
+      device;
 
     // =================================================
     // NORMALIZE SENSOR ARRAY
@@ -410,13 +412,15 @@ export async function POST(
 
     const configuredSensors: SensorConfig[] =
       Array.isArray(
-        (device as any).sensors
+        (currentDevice as any)
+          .sensors
       )
-        ? (device as any).sensors
+        ? (currentDevice as any)
+            .sensors
         : [];
 
     // =================================================
-    // SENSOR NAME HELPER
+    // SENSOR NAME
     // =================================================
 
     function getSensorName(
@@ -439,7 +443,7 @@ export async function POST(
     }
 
     // =================================================
-    // CREATE OR KEEP ACTIVE ALERT
+    // ACTIVATE ALERT
     // =================================================
 
     async function activateAlert(
@@ -483,7 +487,8 @@ export async function POST(
         deviceId:
           normalizedDeviceId,
 
-        type: options.type,
+        type:
+          options.type,
 
         status: "active",
       };
@@ -501,7 +506,6 @@ export async function POST(
           query
         );
 
-      // Already active
       if (existing) {
         return;
       }
@@ -511,7 +515,7 @@ export async function POST(
           normalizedDeviceId,
 
         deviceName:
-          device.name ||
+          currentDevice.name ||
           normalizedDeviceId,
 
         type:
@@ -566,7 +570,7 @@ export async function POST(
     // =================================================
 
     async function resolveAlert(
-      type: AlertType,
+      alertType: AlertType,
       slot?: number
     ) {
       const query: Record<
@@ -576,7 +580,7 @@ export async function POST(
         deviceId:
           normalizedDeviceId,
 
-        type,
+        type: alertType,
 
         status: "active",
       };
@@ -585,7 +589,8 @@ export async function POST(
         typeof slot ===
         "number"
       ) {
-        query.slot = slot;
+        query.slot =
+          slot;
       }
 
       const activeAlert =
@@ -606,15 +611,17 @@ export async function POST(
       await activeAlert.save();
 
       console.log(
-        `[alerts] Resolved ${type} for ${normalizedDeviceId}`
+        `[alerts] Resolved ${alertType} for ${normalizedDeviceId}`
       );
     }
 
     // =================================================
-    // CHECK SENSOR VALUES
+    // CHECK ALL SENSOR VALUES
     // =================================================
 
-    for (const sensor of normalizedSensors) {
+    for (
+      const sensor of normalizedSensors
+    ) {
       if (
         sensor.value === null ||
         sensor.value ===
@@ -647,6 +654,8 @@ export async function POST(
         sensorType ===
           "DHT_TEMPERATURE"
       ) {
+        // HIGH TEMPERATURE
+
         if (
           value >
           ALERT_THRESHOLDS.highTemperature
@@ -687,6 +696,8 @@ export async function POST(
             sensor.slot
           );
         }
+
+        // LOW TEMPERATURE
 
         if (
           value <
@@ -738,6 +749,8 @@ export async function POST(
         sensorType ===
         "DHT_HUMIDITY"
       ) {
+        // HIGH HUMIDITY
+
         if (
           value >
           ALERT_THRESHOLDS.highHumidity
@@ -778,6 +791,8 @@ export async function POST(
             sensor.slot
           );
         }
+
+        // LOW HUMIDITY
 
         if (
           value <
@@ -823,12 +838,12 @@ export async function POST(
     }
 
     // =================================================
-    // LEGACY / DEVICE CURRENT
+    // CURRENT
     // =================================================
 
     if (
       typeof current ===
-      "number" &&
+        "number" &&
       Number.isFinite(
         current
       )
@@ -873,7 +888,7 @@ export async function POST(
 
     if (
       typeof rssi ===
-      "number" &&
+        "number" &&
       Number.isFinite(
         rssi
       )
