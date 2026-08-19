@@ -10,34 +10,50 @@ const DEFAULT_CONFIG = {
     {
       slot: 1,
       type: "TEMPERATURE",
+      name: "DS18B20 #1",
+      unit: "°C",
     },
     {
       slot: 2,
       type: "TEMPERATURE",
+      name: "DS18B20 #2",
+      unit: "°C",
     },
     {
       slot: 3,
       type: "TEMPERATURE",
+      name: "DS18B20 #3",
+      unit: "°C",
     },
     {
       slot: 4,
       type: "TEMPERATURE",
+      name: "DS18B20 #4",
+      unit: "°C",
     },
     {
       slot: 5,
       type: "TEMPERATURE",
+      name: "DS18B20 #5",
+      unit: "°C",
     },
     {
       slot: 6,
       type: "TEMPERATURE",
+      name: "DS18B20 #6",
+      unit: "°C",
     },
     {
       slot: 7,
       type: "DHT_HUMIDITY",
+      name: "AM2302 Humidity",
+      unit: "%",
     },
     {
       slot: 8,
       type: "N/A",
+      name: "Unused",
+      unit: "",
     },
   ],
 };
@@ -58,6 +74,7 @@ export async function GET(
     if (!id) {
       return NextResponse.json(
         {
+          success: false,
           error: "Device ID is required",
         },
         {
@@ -67,7 +84,7 @@ export async function GET(
     }
 
     // -----------------------------------------
-    // FIND BY DEVICE ID
+    // FIND DEVICE BY DEVICE ID
     // -----------------------------------------
 
     let device = await Device.findOne({
@@ -82,26 +99,18 @@ export async function GET(
       try {
         device = await Device.findById(id).lean();
       } catch {
-        // The id isn't a valid MongoDB ObjectId.
-        // That's okay because it may simply be
-        // an ESP32 deviceId.
+        // Not a valid MongoDB ObjectId.
       }
     }
 
     // -----------------------------------------
-    // DEVICE DOESN'T EXIST YET
+    // DEVICE DOES NOT EXIST
     // -----------------------------------------
-    //
-    // This happens on the first ESP32 boot.
-    //
-    // Do NOT return 500.
-    //
-    // Return a default configuration so the ESP32
-    // can continue working.
-    //
 
     if (!device) {
       return NextResponse.json({
+        success: true,
+
         deviceId: id,
 
         deviceName: id,
@@ -115,10 +124,42 @@ export async function GET(
     }
 
     // -----------------------------------------
-    // EXISTING DEVICE
+    // DATABASE CONFIG
+    // -----------------------------------------
+
+    const sendInterval =
+      typeof device.sendInterval ===
+        "number" &&
+      device.sendInterval >= 1000
+        ? device.sendInterval
+        : DEFAULT_CONFIG.sendInterval;
+
+    const sensors =
+      Array.isArray(device.sensors) &&
+      device.sensors.length > 0
+        ? device.sensors.map(
+            (sensor) => ({
+              slot: sensor.slot,
+
+              type: sensor.type,
+
+              name:
+                sensor.name ||
+                `Sensor #${sensor.slot}`,
+
+              unit:
+                sensor.unit || "",
+            })
+          )
+        : DEFAULT_CONFIG.sensors;
+
+    // -----------------------------------------
+    // RESPONSE
     // -----------------------------------------
 
     return NextResponse.json({
+      success: true,
+
       deviceId:
         device.deviceId,
 
@@ -126,11 +167,9 @@ export async function GET(
         device.name ||
         device.deviceId,
 
-      sendInterval:
-        DEFAULT_CONFIG.sendInterval,
+      sendInterval,
 
-      sensors:
-        DEFAULT_CONFIG.sensors,
+      sensors,
     });
   } catch (error) {
     console.error(
@@ -140,6 +179,7 @@ export async function GET(
 
     return NextResponse.json(
       {
+        success: false,
         error:
           "Failed to load device configuration",
       },
