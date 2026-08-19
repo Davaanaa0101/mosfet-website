@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+import crypto from "crypto";
+
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
@@ -55,6 +57,33 @@ function isAlertType(
 }
 
 // =====================================================
+// API KEY COMPARISON
+// =====================================================
+
+function safeEqual(
+  a: string,
+  b: string
+): boolean {
+  const aBuffer =
+    Buffer.from(a);
+
+  const bBuffer =
+    Buffer.from(b);
+
+  if (
+    aBuffer.length !==
+    bBuffer.length
+  ) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    aBuffer,
+    bBuffer
+  );
+}
+
+// =====================================================
 // POST TELEMETRY
 // =====================================================
 
@@ -63,10 +92,186 @@ export async function POST(
 ) {
   try {
     // =================================================
+    // DEVICE API KEY AUTHENTICATION
+    // =================================================
+
+    const authorization =
+      req.headers.get(
+        "authorization"
+      );
+
+    if (!authorization) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device API key is required",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    if (
+      !authorization.startsWith(
+        "Bearer "
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid authorization format",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    const apiKey =
+      authorization
+        .slice(7)
+        .trim();
+
+    if (!apiKey) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device API key is required",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // READ BODY
+    // =================================================
+
+    const body =
+      await req.json();
+
+    const {
+      deviceId,
+      name,
+      type,
+      location,
+      macAddress,
+      firmware,
+      ipAddress,
+      wifiSSID,
+
+      temperature,
+      humidity,
+      voltage,
+      current,
+      power,
+      energy,
+
+      rssi,
+      freeHeap,
+      uptime,
+
+      sensors,
+    } = body;
+
+    // =================================================
+    // VALIDATE DEVICE ID
+    // =================================================
+
+    if (
+      !deviceId ||
+      typeof deviceId !==
+        "string"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "deviceId is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const normalizedDeviceId =
+      deviceId.trim();
+
+    if (
+      !normalizedDeviceId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "deviceId cannot be empty",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
     // DATABASE
     // =================================================
 
     await connectDB();
+
+    // =================================================
+    // FIND DEVICE
+    //
+    // IMPORTANT:
+    // Devices must already exist and have an API key.
+    // =================================================
+
+    const device =
+      await Device.findOne({
+        deviceId:
+          normalizedDeviceId,
+      });
+
+    if (!device) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device not found. Register the device first.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // =================================================
+    // VERIFY DEVICE API KEY
+    // =================================================
+
+    if (
+      !device.apiKey ||
+      !safeEqual(
+        apiKey,
+        device.apiKey
+      )
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid device API key",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
 
     // =================================================
     // LOAD ALERT SETTINGS
@@ -152,76 +357,6 @@ export async function POST(
     };
 
     // =================================================
-    // READ BODY
-    // =================================================
-
-    const body =
-      await req.json();
-
-    const {
-      deviceId,
-      name,
-      type,
-      location,
-      macAddress,
-      firmware,
-      ipAddress,
-      wifiSSID,
-
-      temperature,
-      humidity,
-      voltage,
-      current,
-      power,
-      energy,
-
-      rssi,
-      freeHeap,
-      uptime,
-
-      sensors,
-    } = body;
-
-    // =================================================
-    // VALIDATE DEVICE ID
-    // =================================================
-
-    if (
-      !deviceId ||
-      typeof deviceId !==
-        "string"
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "deviceId is required",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const normalizedDeviceId =
-      deviceId.trim();
-
-    if (
-      !normalizedDeviceId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "deviceId cannot be empty",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // =================================================
     // DEVICE TYPES
     // =================================================
 
@@ -236,7 +371,8 @@ export async function POST(
       (typeof deviceTypes)[number];
 
     const normalizedType: DeviceType =
-      typeof type === "string" &&
+      typeof type ===
+        "string" &&
       deviceTypes.includes(
         type
           .trim()
@@ -248,131 +384,64 @@ export async function POST(
         : "esp32";
 
     // =================================================
-    // FIND DEVICE
+    // UPDATE DEVICE
     // =================================================
 
-    let device =
-      await Device.findOne({
-        deviceId:
-          normalizedDeviceId,
-      });
+    device.status =
+      "online";
 
-    // =================================================
-    // CREATE DEVICE
-    // =================================================
+    device.lastSeen =
+      new Date();
 
-    if (!device) {
-      device =
-        await Device.create({
-          deviceId:
-            normalizedDeviceId,
-
-          name:
-            typeof name ===
-              "string" &&
-            name.trim()
-              ? name.trim()
-              : normalizedDeviceId,
-
-          type:
-            normalizedType,
-
-          location:
-            typeof location ===
-            "string"
-              ? location.trim()
-              : "",
-
-          macAddress:
-            typeof macAddress ===
-            "string"
-              ? macAddress.trim()
-              : "",
-
-          firmware:
-            typeof firmware ===
-            "string"
-              ? firmware.trim()
-              : "",
-
-          ipAddress:
-            typeof ipAddress ===
-            "string"
-              ? ipAddress.trim()
-              : "",
-
-          status: "online",
-
-          lastSeen:
-            new Date(),
-        });
-
-      console.log(
-        `[telemetry] Registered new device: ${normalizedDeviceId}`
-      );
+    if (
+      typeof name ===
+        "string" &&
+      name.trim()
+    ) {
+      device.name =
+        name.trim();
     }
 
-    // =================================================
-    // UPDATE EXISTING DEVICE
-    // =================================================
+    device.type =
+      normalizedType;
 
-    else {
-      device.status =
-        "online";
-
-      device.lastSeen =
-        new Date();
-
-      if (
-        typeof name ===
-          "string" &&
-        name.trim()
-      ) {
-        device.name =
-          name.trim();
-      }
-
-      device.type =
-        normalizedType;
-
-      if (
-        typeof location ===
-          "string" &&
-        location.trim()
-      ) {
-        device.location =
-          location.trim();
-      }
-
-      if (
-        typeof macAddress ===
-          "string" &&
-        macAddress.trim()
-      ) {
-        device.macAddress =
-          macAddress.trim();
-      }
-
-      if (
-        typeof firmware ===
-          "string" &&
-        firmware.trim()
-      ) {
-        device.firmware =
-          firmware.trim();
-      }
-
-      if (
-        typeof ipAddress ===
-          "string" &&
-        ipAddress.trim()
-      ) {
-        device.ipAddress =
-          ipAddress.trim();
-      }
-
-      await device.save();
+    if (
+      typeof location ===
+        "string" &&
+      location.trim()
+    ) {
+      device.location =
+        location.trim();
     }
+
+    if (
+      typeof macAddress ===
+        "string" &&
+      macAddress.trim()
+    ) {
+      device.macAddress =
+        macAddress.trim();
+    }
+
+    if (
+      typeof firmware ===
+        "string" &&
+      firmware.trim()
+    ) {
+      device.firmware =
+        firmware.trim();
+    }
+
+    if (
+      typeof ipAddress ===
+        "string" &&
+      ipAddress.trim()
+    ) {
+      device.ipAddress =
+        ipAddress.trim();
+    }
+
+    await device.save();
 
     // =================================================
     // GUARANTEED DEVICE REFERENCE
@@ -750,9 +819,7 @@ export async function POST(
         sensorType ===
           "DHT_TEMPERATURE"
       ) {
-        // -------------------------------------------------
         // HIGH TEMPERATURE
-        // -------------------------------------------------
 
         if (
           !settings.highTemperatureEnabled
@@ -803,9 +870,7 @@ export async function POST(
           );
         }
 
-        // -------------------------------------------------
         // LOW TEMPERATURE
-        // -------------------------------------------------
 
         if (
           !settings.lowTemperatureEnabled
@@ -865,9 +930,7 @@ export async function POST(
         sensorType ===
         "DHT_HUMIDITY"
       ) {
-        // -------------------------------------------------
         // HIGH HUMIDITY
-        // -------------------------------------------------
 
         if (
           !settings.highHumidityEnabled
@@ -918,9 +981,7 @@ export async function POST(
           );
         }
 
-        // -------------------------------------------------
         // LOW HUMIDITY
-        // -------------------------------------------------
 
         if (
           !settings.lowHumidityEnabled
