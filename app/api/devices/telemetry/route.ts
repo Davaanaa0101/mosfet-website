@@ -92,7 +92,7 @@ export async function POST(
 ) {
   try {
     // =================================================
-    // DEVICE API KEY AUTHENTICATION
+    // API KEY AUTHENTICATION
     // =================================================
 
     const authorization =
@@ -149,7 +149,7 @@ export async function POST(
     }
 
     // =================================================
-    // READ JSON BODY
+    // READ JSON
     // =================================================
 
     let body: Record<
@@ -174,7 +174,7 @@ export async function POST(
     }
 
     // =================================================
-    // EXTRACT DATA
+    // EXTRACT BODY
     // =================================================
 
     const {
@@ -204,9 +204,9 @@ export async function POST(
     // =================================================
 
     if (
-      !deviceId ||
       typeof deviceId !==
-        "string"
+        "string" ||
+      !deviceId.trim()
     ) {
       return NextResponse.json(
         {
@@ -223,29 +223,14 @@ export async function POST(
     const normalizedDeviceId =
       deviceId.trim();
 
-    if (
-      !normalizedDeviceId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "deviceId cannot be empty",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
     // =================================================
     // VALIDATE SERIAL ID
     // =================================================
 
     if (
-      !serialId ||
       typeof serialId !==
-        "string"
+        "string" ||
+      !serialId.trim()
     ) {
       return NextResponse.json(
         {
@@ -262,21 +247,6 @@ export async function POST(
     const normalizedSerialId =
       serialId.trim();
 
-    if (
-      !normalizedSerialId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "serialId cannot be empty",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
     // =================================================
     // DATABASE
     // =================================================
@@ -284,11 +254,12 @@ export async function POST(
     await connectDB();
 
     // =================================================
-    // FIND DEVICE
+    // FIND REGISTERED DEVICE
     //
-    // IMPORTANT:
+    // BOTH IDs MUST MATCH.
     //
-    // Both deviceId AND serialId must match.
+    // This is important because the serial ID is the
+    // physical identity of the ESP32.
     // =================================================
 
     const device =
@@ -299,6 +270,10 @@ export async function POST(
         serialId:
           normalizedSerialId,
       });
+
+    // =================================================
+    // DEVICE NOT FOUND
+    // =================================================
 
     if (!device) {
       return NextResponse.json(
@@ -314,14 +289,24 @@ export async function POST(
     }
 
     // =================================================
-    // VERIFY DEVICE API KEY
+    // NON-NULL DEVICE REFERENCE
+    //
+    // From this point onward TypeScript knows this is
+    // a real registered Device document.
+    // =================================================
+
+    const registeredDevice =
+      device;
+
+    // =================================================
+    // VERIFY API KEY
     // =================================================
 
     if (
-      !device.apiKey ||
+      !registeredDevice.apiKey ||
       !safeEqual(
         apiKey,
-        device.apiKey
+        registeredDevice.apiKey
       )
     ) {
       return NextResponse.json(
@@ -337,12 +322,12 @@ export async function POST(
     }
 
     // =================================================
-    // DEVICE MUST BE REGISTERED
+    // VERIFY REGISTRATION
     // =================================================
 
     if (
-      !device.userId ||
-      !device.registeredAt
+      !registeredDevice.userId ||
+      !registeredDevice.registeredAt
     ) {
       return NextResponse.json(
         {
@@ -437,7 +422,7 @@ export async function POST(
     };
 
     // =================================================
-    // DEVICE TYPES
+    // NORMALIZE DEVICE TYPE
     // =================================================
 
     const deviceTypes = [
@@ -463,24 +448,24 @@ export async function POST(
         : "esp32";
 
     // =================================================
-    // UPDATE BASIC DEVICE INFORMATION
+    // UPDATE DEVICE INFORMATION
     // =================================================
 
-    device.status =
+    registeredDevice.status =
       "RUNNING";
 
-    device.lastSeen =
+    registeredDevice.lastSeen =
       new Date();
 
     if (
       typeof name === "string" &&
       name.trim()
     ) {
-      device.name =
+      registeredDevice.name =
         name.trim();
     }
 
-    device.type =
+    registeredDevice.type =
       normalizedType;
 
     if (
@@ -488,7 +473,7 @@ export async function POST(
         "string" &&
       location.trim()
     ) {
-      device.location =
+      registeredDevice.location =
         location.trim();
     }
 
@@ -497,7 +482,7 @@ export async function POST(
         "string" &&
       macAddress.trim()
     ) {
-      device.macAddress =
+      registeredDevice.macAddress =
         macAddress.trim();
     }
 
@@ -506,7 +491,7 @@ export async function POST(
         "string" &&
       firmware.trim()
     ) {
-      device.firmware =
+      registeredDevice.firmware =
         firmware.trim();
     }
 
@@ -515,42 +500,46 @@ export async function POST(
         "string" &&
       ipAddress.trim()
     ) {
-      device.ipAddress =
+      registeredDevice.ipAddress =
         ipAddress.trim();
     }
 
     // =================================================
-    // SAVE DEVICE
+    // SAVE LAST SEEN
     // =================================================
 
-    await device.save();
+    await registeredDevice.save();
 
     // =================================================
-    // NORMALIZE SENSOR ARRAY
+    // NORMALIZE SENSORS
     // =================================================
 
     const normalizedSensors: IncomingSensor[] =
       Array.isArray(sensors)
         ? sensors
             .filter(
-              (sensor) =>
-                sensor &&
-                typeof sensor ===
-                  "object" &&
-                typeof (
+              (sensor) => {
+                if (
+                  !sensor ||
+                  typeof sensor !==
+                    "object"
+                ) {
+                  return false;
+                }
+
+                const item =
                   sensor as Record<
                     string,
                     unknown
-                  >
-                ).slot ===
-                  "number" &&
-                typeof (
-                  sensor as Record<
-                    string,
-                    unknown
-                  >
-                ).type ===
-                  "string"
+                  >;
+
+                return (
+                  typeof item.slot ===
+                    "number" &&
+                  typeof item.type ===
+                    "string"
+                );
+              }
             )
             .map(
               (sensor) => {
@@ -669,13 +658,13 @@ export async function POST(
 
     const configuredSensors: SensorConfig[] =
       Array.isArray(
-        device.sensors
+        registeredDevice.sensors
       )
-        ? device.sensors
+        ? registeredDevice.sensors
         : [];
 
     // =================================================
-    // SENSOR NAME
+    // GET SENSOR NAME
     // =================================================
 
     function getSensorName(
@@ -762,7 +751,7 @@ export async function POST(
           query
         );
 
-      // Do not create duplicate alerts
+      // Prevent duplicates.
       if (existing) {
         return;
       }
@@ -772,7 +761,7 @@ export async function POST(
           normalizedDeviceId,
 
         deviceName:
-          device.name ||
+          registeredDevice.name ||
           normalizedDeviceId,
 
         type:
@@ -809,7 +798,8 @@ export async function POST(
             : null,
 
         unit:
-          options.unit || "",
+          options.unit ||
+          "",
 
         status:
           "active",
@@ -915,7 +905,9 @@ export async function POST(
         sensorType ===
           "DHT_TEMPERATURE"
       ) {
+        // -----------------------------------------------
         // HIGH TEMPERATURE
+        // -----------------------------------------------
 
         if (
           !settings.highTemperatureEnabled
@@ -966,7 +958,9 @@ export async function POST(
           );
         }
 
+        // -----------------------------------------------
         // LOW TEMPERATURE
+        // -----------------------------------------------
 
         if (
           !settings.lowTemperatureEnabled
@@ -1026,7 +1020,9 @@ export async function POST(
         sensorType ===
         "DHT_HUMIDITY"
       ) {
+        // -----------------------------------------------
         // HIGH HUMIDITY
+        // -----------------------------------------------
 
         if (
           !settings.highHumidityEnabled
@@ -1077,7 +1073,9 @@ export async function POST(
           );
         }
 
+        // -----------------------------------------------
         // LOW HUMIDITY
+        // -----------------------------------------------
 
         if (
           !settings.lowHumidityEnabled
@@ -1233,11 +1231,7 @@ export async function POST(
     }
 
     // =================================================
-    // UPDATE DEVICE STATUS
-    //
-    // Critical -> ERROR
-    // Warning  -> WARNING
-    // None     -> RUNNING
+    // DETERMINE FINAL STATUS
     // =================================================
 
     const activeAlerts =
@@ -1248,7 +1242,9 @@ export async function POST(
         status:
           "active",
       })
-        .select("severity")
+        .select(
+          "severity"
+        )
         .lean();
 
     const hasCriticalAlert =
@@ -1265,22 +1261,29 @@ export async function POST(
           "warning"
       );
 
+    // =================================================
+    // STATUS
+    // =================================================
+
     if (
       hasCriticalAlert
     ) {
-      device.status =
+      registeredDevice.status =
         "ERROR";
     } else if (
       hasWarningAlert
     ) {
-      device.status =
+      registeredDevice.status =
         "WARNING";
     } else {
-      device.status =
+      registeredDevice.status =
         "RUNNING";
     }
 
-    await device.save();
+    registeredDevice.lastSeen =
+      new Date();
+
+    await registeredDevice.save();
 
     // =================================================
     // RESPONSE
@@ -1299,7 +1302,7 @@ export async function POST(
         normalizedSerialId,
 
       status:
-        device.status,
+        registeredDevice.status,
 
       sensorCount:
         normalizedSensors.length,
@@ -1314,7 +1317,7 @@ export async function POST(
     });
   } catch (error) {
     console.error(
-      "[telemetry] Error:",
+      "[telemetry] POST error:",
       error
     );
 
@@ -1325,7 +1328,7 @@ export async function POST(
         error:
           error instanceof Error
             ? error.message
-            : String(error),
+            : "Failed to process telemetry",
       },
       {
         status: 500,
