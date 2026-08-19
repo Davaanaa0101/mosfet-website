@@ -1,26 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
-import DeviceLog from "@/models/DeviceLog";
 import Device from "@/models/Device";
+import DeviceLog from "@/models/DeviceLog";
 
-export async function GET(
-  request: NextRequest,
-  {
-    params,
-  }: {
-    params: Promise<{ id: string }>;
+const DEVICE_TYPES = [
+  "esp32",
+  "plc",
+  "modbus",
+  "camera",
+] as const;
+
+type DeviceType = (typeof DEVICE_TYPES)[number];
+
+function normalizeDeviceType(
+  value: unknown
+): DeviceType {
+  if (
+    typeof value === "string" &&
+    DEVICE_TYPES.includes(
+      value.trim().toLowerCase() as DeviceType
+    )
+  ) {
+    return value.trim().toLowerCase() as DeviceType;
   }
-) {
+
+  return "esp32";
+}
+
+export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    const { id } = await params;
+    const body = await req.json();
 
-    if (!id) {
+    const {
+      deviceId,
+      name,
+      type,
+      location,
+      macAddress,
+      firmware,
+      ipAddress,
+      wifiSSID,
+
+      temperature,
+      humidity,
+      voltage,
+      current,
+      power,
+      energy,
+
+      rssi,
+      freeHeap,
+      uptime,
+    } = body;
+
+    // -----------------------------------------
+    // VALIDATE DEVICE ID
+    // -----------------------------------------
+
+    if (
+      !deviceId ||
+      typeof deviceId !== "string"
+    ) {
       return NextResponse.json(
         {
-          error: "Device ID is required",
+          success: false,
+          error: "deviceId is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const normalizedDeviceId =
+      deviceId.trim();
+
+    if (!normalizedDeviceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "deviceId cannot be empty",
         },
         {
           status: 400,
@@ -29,83 +91,203 @@ export async function GET(
     }
 
     // -----------------------------------------
+    // NORMALIZE DEVICE TYPE
+    // -----------------------------------------
+
+    const normalizedType =
+      normalizeDeviceType(type);
+
+    // -----------------------------------------
     // FIND DEVICE
     // -----------------------------------------
 
     let device = await Device.findOne({
-      deviceId: id,
-    }).lean();
+      deviceId: normalizedDeviceId,
+    });
 
-    // Also support MongoDB _id
-    if (!device) {
-      try {
-        device = await Device.findById(id).lean();
-      } catch {
-        // Ignore invalid MongoDB ObjectId
-      }
-    }
+    // -----------------------------------------
+    // CREATE DEVICE
+    // -----------------------------------------
 
     if (!device) {
-      return NextResponse.json(
-        {
-          error: "Device not found",
-        },
-        {
-          status: 404,
-        }
+      device = await Device.create({
+        deviceId: normalizedDeviceId,
+
+        name:
+          typeof name === "string" &&
+          name.trim()
+            ? name.trim()
+            : normalizedDeviceId,
+
+        type: normalizedType,
+
+        location:
+          typeof location === "string"
+            ? location.trim()
+            : "",
+
+        macAddress:
+          typeof macAddress === "string"
+            ? macAddress.trim()
+            : "",
+
+        firmware:
+          typeof firmware === "string"
+            ? firmware.trim()
+            : "",
+
+        ipAddress:
+          typeof ipAddress === "string"
+            ? ipAddress.trim()
+            : "",
+
+        status: "online",
+
+        lastSeen: new Date(),
+      });
+
+      console.log(
+        `[telemetry] Registered new device: ${normalizedDeviceId}`
       );
     }
 
     // -----------------------------------------
-    // QUERY PARAMETERS
+    // UPDATE EXISTING DEVICE
     // -----------------------------------------
 
-    const { searchParams } =
-      new URL(request.url);
+    else {
+      device.status = "online";
+      device.lastSeen = new Date();
 
-    const limitParam =
-      searchParams.get("limit");
+      if (
+        typeof name === "string" &&
+        name.trim()
+      ) {
+        device.name =
+          name.trim();
+      }
 
-    const limit = Math.min(
-      Math.max(
-        Number(limitParam) || 100,
-        1
-      ),
-      1000
-    );
+      device.type =
+        normalizedType;
+
+      if (
+        typeof location === "string" &&
+        location.trim()
+      ) {
+        device.location =
+          location.trim();
+      }
+
+      if (
+        typeof macAddress === "string" &&
+        macAddress.trim()
+      ) {
+        device.macAddress =
+          macAddress.trim();
+      }
+
+      if (
+        typeof firmware === "string" &&
+        firmware.trim()
+      ) {
+        device.firmware =
+          firmware.trim();
+      }
+
+      if (
+        typeof ipAddress === "string" &&
+        ipAddress.trim()
+      ) {
+        device.ipAddress =
+          ipAddress.trim();
+      }
+
+      await device.save();
+    }
 
     // -----------------------------------------
-    // LOAD TELEMETRY
+    // SAVE TELEMETRY
     // -----------------------------------------
 
-    const logs = await DeviceLog.find({
-      deviceId: device.deviceId,
-    })
-      .sort({
-        createdAt: -1,
-      })
-      .limit(limit)
-      .lean();
+    await DeviceLog.create({
+      deviceId: normalizedDeviceId,
+
+      temperature:
+        typeof temperature === "number"
+          ? temperature
+          : undefined,
+
+      humidity:
+        typeof humidity === "number"
+          ? humidity
+          : undefined,
+
+      voltage:
+        typeof voltage === "number"
+          ? voltage
+          : undefined,
+
+      current:
+        typeof current === "number"
+          ? current
+          : undefined,
+
+      power:
+        typeof power === "number"
+          ? power
+          : undefined,
+
+      energy:
+        typeof energy === "number"
+          ? energy
+          : undefined,
+
+      wifiSSID:
+        typeof wifiSSID === "string"
+          ? wifiSSID
+          : undefined,
+
+      ipAddress:
+        typeof ipAddress === "string"
+          ? ipAddress
+          : undefined,
+
+      rssi:
+        typeof rssi === "number"
+          ? rssi
+          : undefined,
+
+      freeHeap:
+        typeof freeHeap === "number"
+          ? freeHeap
+          : undefined,
+
+      uptime:
+        typeof uptime === "number"
+          ? uptime
+          : undefined,
+    });
 
     // -----------------------------------------
-    // RETURN OLDEST → NEWEST
+    // RESPONSE
     // -----------------------------------------
-
-    logs.reverse();
 
     return NextResponse.json({
-      deviceId: device.deviceId,
-      data: logs,
+      success: true,
+      message: "Telemetry received",
+      deviceId: normalizedDeviceId,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error(
-      "[device-telemetry] Error:",
+      "[telemetry] Error:",
       error
     );
 
     return NextResponse.json(
       {
-        error: "Failed to load telemetry",
+        success: false,
+        error: "Internal Server Error",
       },
       {
         status: 500,
