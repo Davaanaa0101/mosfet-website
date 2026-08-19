@@ -3,12 +3,24 @@ import {
   NextResponse,
 } from "next/server";
 
+import crypto from "crypto";
+
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 
 // =====================================================
-// REGISTER DEVICE
+// GENERATE DEVICE API KEY
+// =====================================================
+
+function generateApiKey(): string {
+  return crypto
+    .randomBytes(32)
+    .toString("hex");
+}
+
+// =====================================================
+// POST
 // =====================================================
 
 export async function POST(
@@ -16,7 +28,7 @@ export async function POST(
 ) {
   try {
     // =================================================
-    // CHECK LOGIN SESSION
+    // AUTHENTICATED USER
     // =================================================
 
     const session =
@@ -37,7 +49,7 @@ export async function POST(
     }
 
     // =================================================
-    // READ BODY
+    // BODY
     // =================================================
 
     const body =
@@ -48,10 +60,6 @@ export async function POST(
       "string"
         ? body.serialId.trim()
         : "";
-
-    // =================================================
-    // VALIDATE SERIAL ID
-    // =================================================
 
     if (!serialId) {
       return NextResponse.json(
@@ -67,7 +75,7 @@ export async function POST(
     }
 
     // =================================================
-    // CONNECT DATABASE
+    // DATABASE
     // =================================================
 
     await connectDB();
@@ -95,14 +103,49 @@ export async function POST(
     }
 
     // =================================================
-    // CHECK OWNERSHIP
+    // ALREADY REGISTERED
     // =================================================
 
-    if (
-      device.userId &&
-      device.userId !==
+    if (device.userId) {
+      if (
+        device.userId ===
         session.user.id
-    ) {
+      ) {
+        return NextResponse.json(
+          {
+            success: true,
+
+            message:
+              "Device is already registered to your account.",
+
+            data: {
+              id:
+                String(
+                  device._id
+                ),
+
+              serialId:
+                device.serialId,
+
+              deviceId:
+                device.deviceId,
+
+              name:
+                device.name,
+
+              status:
+                device.status,
+
+              registeredAt:
+                device.registeredAt,
+            },
+          },
+          {
+            status: 200,
+          }
+        );
+      }
+
       return NextResponse.json(
         {
           success: false,
@@ -116,40 +159,11 @@ export async function POST(
     }
 
     // =================================================
-    // ALREADY REGISTERED BY THIS USER
+    // GENERATE API KEY
     // =================================================
 
-    if (
-      device.userId ===
-      session.user.id
-    ) {
-      return NextResponse.json({
-        success: true,
-
-        message:
-          "Device is already registered to your account.",
-
-        data: {
-          id:
-            String(device._id),
-
-          serialId:
-            device.serialId,
-
-          deviceId:
-            device.deviceId,
-
-          name:
-            device.name,
-
-          status:
-            device.status,
-
-          registeredAt:
-            device.registeredAt,
-        },
-      });
-    }
+    const apiKey =
+      generateApiKey();
 
     // =================================================
     // REGISTER DEVICE
@@ -160,6 +174,9 @@ export async function POST(
 
     device.registeredAt =
       new Date();
+
+    device.apiKey =
+      apiKey;
 
     device.status =
       "REGISTERED";
@@ -179,7 +196,9 @@ export async function POST(
 
         data: {
           id:
-            String(device._id),
+            String(
+              device._id
+            ),
 
           serialId:
             device.serialId,
@@ -201,10 +220,12 @@ export async function POST(
 
           registeredAt:
             device.registeredAt,
+
+          apiKey,
         },
       },
       {
-        status: 200,
+        status: 201,
       }
     );
   } catch (error) {
