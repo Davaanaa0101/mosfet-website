@@ -1,128 +1,137 @@
 "use client";
 
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 
-interface TelemetryPoint {
+export interface TelemetryChartData {
   createdAt: string;
+
   temperature?: number;
   humidity?: number;
-  current?: number;
   voltage?: number;
+  current?: number;
   power?: number;
+  energy?: number;
 }
 
 interface TelemetryChartProps {
-  data: TelemetryPoint[];
-}
-
-function formatTime(value: string) {
-  const date = new Date(value);
-
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  title: string;
+  data: TelemetryChartData[];
+  dataKey: string;
+  unit: string;
 }
 
 export default function TelemetryChart({
+  title,
   data,
+  dataKey,
+  unit,
 }: TelemetryChartProps) {
-  const chartData = data.map((item) => ({
-    ...item,
+  const chartData = data.map((item) => {
+    const rawValue =
+      item[
+        dataKey as keyof TelemetryChartData
+      ];
 
-    time: formatTime(
-      item.createdAt
-    ),
+    return {
+      ...item,
 
-    temperature:
-      typeof item.temperature === "number"
-        ? item.temperature
-        : null,
+      time: new Date(
+        item.createdAt
+      ).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
 
-    humidity:
-      typeof item.humidity === "number"
-        ? item.humidity
-        : null,
-
-    current:
-      typeof item.current === "number"
-        ? item.current
-        : null,
-
-    voltage:
-      typeof item.voltage === "number"
-        ? item.voltage
-        : null,
-
-    power:
-      typeof item.power === "number"
-        ? item.power
-        : null,
-  }));
-
-  if (chartData.length === 0) {
-    return (
-      <div className="flex h-[350px] items-center justify-center rounded-lg border">
-        <p className="text-muted-foreground">
-          No telemetry data available.
-        </p>
-      </div>
-    );
-  }
+      value:
+        typeof rawValue === "number"
+          ? rawValue
+          : null,
+    };
+  });
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer
-        width="100%"
-        height={350}
-      >
-        <LineChart
-          data={chartData}
-          margin={{
-            top: 10,
-            right: 20,
-            left: 10,
-            bottom: 10,
-          }}
+    <div className="rounded-xl border bg-card p-5">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">
+          {title}
+        </h3>
+
+        <p className="text-sm text-muted-foreground">
+          Historical telemetry
+        </p>
+      </div>
+
+      {chartData.length === 0 ? (
+        <div className="flex h-[300px] items-center justify-center">
+          <p className="text-sm text-muted-foreground">
+            No telemetry data available.
+          </p>
+        </div>
+      ) : (
+        <ResponsiveContainer
+          width="100%"
+          height={300}
         >
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
+          <LineChart
+            data={chartData}
+            margin={{
+              top: 10,
+              right: 20,
+              left: 10,
+              bottom: 10,
+            }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+            />
 
-          <XAxis
-            dataKey="time"
-          />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 12 }}
+            />
 
-          <YAxis />
+            <YAxis
+              tick={{ fontSize: 12 }}
+            />
 
-          <Tooltip />
+            <Tooltip
+              formatter={(value) => {
+                if (
+                  typeof value === "number"
+                ) {
+                  return [
+                    `${value.toFixed(2)} ${unit}`,
+                    title,
+                  ];
+                }
 
-          <Line
-            type="monotone"
-            dataKey="temperature"
-            name="Temperature"
-            dot={false}
-            connectNulls
-          />
+                return [
+                  "N/A",
+                  title,
+                ];
+              }}
+            />
 
-          <Line
-            type="monotone"
-            dataKey="humidity"
-            name="Humidity"
-            dot={false}
-            connectNulls
-          />
-        </LineChart>
-      </ResponsiveContainer>
+            <Line
+              type="monotone"
+              dataKey="value"
+              name={title}
+              dot={false}
+              strokeWidth={2}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </div>
   );
 }
