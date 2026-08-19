@@ -355,7 +355,7 @@ export default function DeviceList() {
 
                           <td className="px-4 py-4">
                             <Link
-                              href={`/devices/${encodeURIComponent(
+                              href={`/dashboard/devices/${encodeURIComponent(
                                 device.deviceId
                               )}`}
                               className="block"
