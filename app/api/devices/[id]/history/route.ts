@@ -4,10 +4,17 @@ import {
 } from "next/server";
 
 import { auth } from "@/lib/auth";
-
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
+
+// =====================================================
+// GET TELEMETRY HISTORY
+//
+// Dashboard authentication.
+//
+// User must own the device.
+// =====================================================
 
 export async function GET(
   request: NextRequest,
@@ -20,20 +27,22 @@ export async function GET(
   }
 ) {
   try {
-    // =====================================================
+    // =================================================
     // AUTHENTICATION
-    // =====================================================
+    // =================================================
 
     const session =
       await auth.api.getSession({
-        headers: request.headers,
+        headers:
+          request.headers,
       });
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized",
+          error:
+            "Unauthorized",
         },
         {
           status: 401,
@@ -41,17 +50,18 @@ export async function GET(
       );
     }
 
-    // =====================================================
+    // =================================================
     // DATABASE
-    // =====================================================
+    // =================================================
 
     await connectDB();
 
-    // =====================================================
+    // =================================================
     // GET DEVICE ID
-    // =====================================================
+    // =================================================
 
-    const { id } = await params;
+    const { id } =
+      await params;
 
     if (!id) {
       return NextResponse.json(
@@ -66,25 +76,42 @@ export async function GET(
       );
     }
 
-    // =====================================================
-    // FIND DEVICE BY MONGODB _ID
-    // =====================================================
+    // =================================================
+    // FIND DEVICE
+    //
+    // IMPORTANT:
+    // Ownership is checked here.
+    // =================================================
 
-    let device;
+    let device =
+      await Device.findOne({
+        deviceId: id,
 
-    try {
-      device =
-        await Device.findById(
-          id
-        ).lean();
-    } catch {
-      // Invalid MongoDB ObjectId
-      device = null;
+        userId:
+          session.user.id,
+      }).lean();
+
+    // =================================================
+    // SUPPORT MONGODB _ID
+    // =================================================
+
+    if (!device) {
+      try {
+        device =
+          await Device.findOne({
+            _id: id,
+
+            userId:
+              session.user.id,
+          }).lean();
+      } catch {
+        // Invalid MongoDB ObjectId.
+      }
     }
 
-    // =====================================================
-    // DEVICE NOT FOUND
-    // =====================================================
+    // =================================================
+    // NOT FOUND
+    // =================================================
 
     if (!device) {
       return NextResponse.json(
@@ -99,12 +126,11 @@ export async function GET(
       );
     }
 
-    // =====================================================
+    // =================================================
     // LOAD TELEMETRY HISTORY
     //
-    // DeviceLog uses the ESP32 deviceId,
-    // not MongoDB _id.
-    // =====================================================
+    // DeviceLog uses the ESP32 deviceId.
+    // =================================================
 
     const history =
       await DeviceLog.find({
@@ -117,15 +143,15 @@ export async function GET(
         .limit(500)
         .lean();
 
-    // =====================================================
+    // =================================================
     // OLDEST → NEWEST
-    // =====================================================
+    // =================================================
 
     history.reverse();
 
-    // =====================================================
+    // =================================================
     // RESPONSE
-    // =====================================================
+    // =================================================
 
     return NextResponse.json({
       success: true,

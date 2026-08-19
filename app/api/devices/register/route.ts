@@ -21,6 +21,15 @@ function generateApiKey(): string {
 
 // =====================================================
 // POST
+//
+// Register a physical device to the logged-in user.
+//
+// Request:
+//
+// {
+//   "serialId": "MOSFET-ESP32-000001"
+// }
+//
 // =====================================================
 
 export async function POST(
@@ -33,14 +42,16 @@ export async function POST(
 
     const session =
       await auth.api.getSession({
-        headers: request.headers,
+        headers:
+          request.headers,
       });
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized",
+          error:
+            "Unauthorized",
         },
         {
           status: 401,
@@ -49,16 +60,47 @@ export async function POST(
     }
 
     // =================================================
-    // BODY
+    // READ BODY
     // =================================================
 
-    const body =
-      await request.json();
+    let body: unknown;
+
+    try {
+      body =
+        await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid JSON body",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
+    // SERIAL ID
+    // =================================================
 
     const serialId =
-      typeof body.serialId ===
-      "string"
-        ? body.serialId.trim()
+      typeof body ===
+        "object" &&
+      body !== null &&
+      "serialId" in body &&
+      typeof (
+        body as {
+          serialId?: unknown;
+        }
+      ).serialId ===
+        "string"
+        ? (
+            body as {
+              serialId: string;
+            }
+          ).serialId.trim()
         : "";
 
     if (!serialId) {
@@ -67,6 +109,26 @@ export async function POST(
           success: false,
           error:
             "Serial ID is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
+    // SERIAL ID VALIDATION
+    // =================================================
+
+    if (
+      serialId.length >
+      100
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Serial ID is too long",
         },
         {
           status: 400,
@@ -107,6 +169,10 @@ export async function POST(
     // =================================================
 
     if (device.userId) {
+      // -----------------------------------------------
+      // SAME USER
+      // -----------------------------------------------
+
       if (
         device.userId ===
         session.user.id
@@ -133,11 +199,23 @@ export async function POST(
               name:
                 device.name,
 
+              type:
+                device.type,
+
+              location:
+                device.location,
+
               status:
                 device.status,
 
               registeredAt:
                 device.registeredAt,
+
+              // IMPORTANT:
+              // Do NOT return the API key again.
+              //
+              // The user already received it when
+              // the device was first registered.
             },
           },
           {
@@ -146,9 +224,14 @@ export async function POST(
         );
       }
 
+      // -----------------------------------------------
+      // DIFFERENT USER
+      // -----------------------------------------------
+
       return NextResponse.json(
         {
           success: false,
+
           error:
             "This device is already registered to another user.",
         },
@@ -221,6 +304,15 @@ export async function POST(
           registeredAt:
             device.registeredAt,
 
+          // =========================================
+          // IMPORTANT
+          //
+          // This is the ONLY response where we return
+          // the generated API key.
+          //
+          // Save it to the ESP32.
+          // =========================================
+
           apiKey,
         },
       },
@@ -234,9 +326,40 @@ export async function POST(
       error
     );
 
+    // =================================================
+    // DUPLICATE KEY
+    // =================================================
+
+    if (
+      error &&
+      typeof error ===
+        "object" &&
+      "code" in error &&
+      (error as {
+        code?: number;
+      }).code ===
+        11000
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device registration conflict. The device may already be registered.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // =================================================
+    // GENERAL ERROR
+    // =================================================
+
     return NextResponse.json(
       {
         success: false,
+
         error:
           error instanceof Error
             ? error.message
