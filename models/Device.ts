@@ -16,6 +16,18 @@ export interface IDeviceSensorConfig {
 }
 
 // ---------------------------------------------
+// DEVICE STATUS
+// ---------------------------------------------
+
+export type DeviceStatus =
+  | "NOT_REGISTERED"
+  | "REGISTERED"
+  | "RUNNING"
+  | "WARNING"
+  | "ERROR"
+  | "OFFLINE";
+
+// ---------------------------------------------
 // DEVICE
 // ---------------------------------------------
 
@@ -24,6 +36,12 @@ export interface IDevice
   customerId?: string;
 
   projectId?: string;
+
+  // -------------------------------------------
+  // DEVICE IDENTITY
+  // -------------------------------------------
+
+  serialId: string;
 
   deviceId: string;
 
@@ -35,17 +53,31 @@ export interface IDevice
     | "modbus"
     | "camera";
 
+  // -------------------------------------------
+  // USER OWNERSHIP
+  // -------------------------------------------
+
+  userId?: string;
+
+  registeredAt?: Date;
+
+  // -------------------------------------------
+  // LOCATION / NETWORK
+  // -------------------------------------------
+
   location: string;
 
   macAddress?: string;
 
   firmware?: string;
 
-  status:
-    | "online"
-    | "offline";
-
   ipAddress?: string;
+
+  // -------------------------------------------
+  // DEVICE STATUS
+  // -------------------------------------------
+
+  status: DeviceStatus;
 
   lastSeen?: Date;
 
@@ -107,21 +139,65 @@ const DeviceSensorConfigSchema =
 const DeviceSchema =
   new Schema<IDevice>(
     {
-      customerId: String,
+      // -----------------------------------------
+      // LEGACY / OPTIONAL OWNERSHIP
+      // -----------------------------------------
 
-      projectId: String,
+      customerId: {
+        type: String,
+        index: true,
+      },
+
+      projectId: {
+        type: String,
+        index: true,
+      },
+
+      // -----------------------------------------
+      // SERIAL ID
+      //
+      // Physical identity printed on the ESP32.
+      // Example:
+      // MOSFET-ESP32-000001
+      // -----------------------------------------
+
+      serialId: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true,
+        trim: true,
+      },
+
+      // -----------------------------------------
+      // DEVICE ID
+      //
+      // Internal ESP32/device identifier.
+      // Example:
+      // esp32_1
+      // -----------------------------------------
 
       deviceId: {
         type: String,
         unique: true,
         required: true,
         index: true,
+        trim: true,
       },
+
+      // -----------------------------------------
+      // DEVICE NAME
+      // -----------------------------------------
 
       name: {
         type: String,
         required: true,
+        trim: true,
       },
+
+      // -----------------------------------------
+      // DEVICE TYPE
+      // -----------------------------------------
 
       type: {
         type: String,
@@ -134,27 +210,84 @@ const DeviceSchema =
         default: "esp32",
       },
 
+      // -----------------------------------------
+      // USER OWNERSHIP
+      //
+      // undefined = not registered
+      // user ID = registered to that user
+      // -----------------------------------------
+
+      userId: {
+        type: String,
+        index: true,
+        sparse: true,
+      },
+
+      // -----------------------------------------
+      // REGISTRATION DATE
+      // -----------------------------------------
+
+      registeredAt: {
+        type: Date,
+      },
+
+      // -----------------------------------------
+      // LOCATION
+      // -----------------------------------------
+
       location: {
         type: String,
         default: "",
       },
 
-      macAddress: String,
+      // -----------------------------------------
+      // NETWORK
+      // -----------------------------------------
 
-      firmware: String,
+      macAddress: {
+        type: String,
+        default: "",
+      },
+
+      firmware: {
+        type: String,
+        default: "",
+      },
+
+      ipAddress: {
+        type: String,
+        default: "",
+      },
+
+      // -----------------------------------------
+      // STATUS
+      // -----------------------------------------
 
       status: {
         type: String,
+
         enum: [
-          "online",
-          "offline",
+          "NOT_REGISTERED",
+          "REGISTERED",
+          "RUNNING",
+          "WARNING",
+          "ERROR",
+          "OFFLINE",
         ],
-        default: "offline",
+
+        default:
+          "NOT_REGISTERED",
+
+        index: true,
       },
 
-      ipAddress: String,
+      // -----------------------------------------
+      // LAST SEEN
+      // -----------------------------------------
 
-      lastSeen: Date,
+      lastSeen: {
+        type: Date,
+      },
 
       // -----------------------------------------
       // DEVICE API KEY
@@ -238,6 +371,7 @@ const DeviceSchema =
         ],
       },
     },
+
     {
       timestamps: true,
     }
