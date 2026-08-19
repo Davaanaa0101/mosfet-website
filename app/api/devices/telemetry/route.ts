@@ -4,6 +4,10 @@ import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
 
+// =====================================================
+// DEVICE TYPES
+// =====================================================
+
 const DEVICE_TYPES = [
   "esp32",
   "plc",
@@ -11,13 +15,22 @@ const DEVICE_TYPES = [
   "camera",
 ] as const;
 
-type DeviceType = (typeof DEVICE_TYPES)[number];
+type DeviceType =
+  (typeof DEVICE_TYPES)[number];
+
+// =====================================================
+// SENSOR TYPE
+// =====================================================
 
 interface IncomingSensor {
   slot: number;
   type: string;
-  value?: number | null;
+  value: number | null;
 }
+
+// =====================================================
+// NORMALIZE DEVICE TYPE
+// =====================================================
 
 function normalizeDeviceType(
   value: unknown
@@ -28,11 +41,17 @@ function normalizeDeviceType(
       value.trim().toLowerCase() as DeviceType
     )
   ) {
-    return value.trim().toLowerCase() as DeviceType;
+    return value
+      .trim()
+      .toLowerCase() as DeviceType;
   }
 
   return "esp32";
 }
+
+// =====================================================
+// NORMALIZE SENSORS
+// =====================================================
 
 function normalizeSensors(
   value: unknown
@@ -42,37 +61,78 @@ function normalizeSensors(
   }
 
   return value
-    .filter((sensor): sensor is IncomingSensor => {
+    .filter((sensor) => {
+      if (
+        sensor === null ||
+        typeof sensor !== "object"
+      ) {
+        return false;
+      }
+
+      const item =
+        sensor as Record<string, unknown>;
+
       return (
-        sensor !== null &&
-        typeof sensor === "object" &&
-        typeof (sensor as IncomingSensor).slot ===
-          "number" &&
-        typeof (sensor as IncomingSensor).type ===
-          "string"
+        typeof item.slot === "number" &&
+        typeof item.type === "string"
       );
     })
-    .map((sensor) => ({
-      slot: sensor.slot,
-      type: sensor.type.trim(),
-      value:
-        typeof sensor.value === "number"
-          ? sensor.value
-          : null,
-    }));
+    .map((sensor) => {
+      const item =
+        sensor as Record<string, unknown>;
+
+      return {
+        slot: Number(item.slot),
+
+        type:
+          typeof item.type === "string"
+            ? item.type.trim()
+            : "N/A",
+
+        value:
+          typeof item.value === "number"
+            ? item.value
+            : null,
+      };
+    })
+    .filter(
+      (sensor) =>
+        Number.isInteger(sensor.slot) &&
+        sensor.slot >= 1 &&
+        sensor.slot <= 8
+    );
 }
+
+// =====================================================
+// POST TELEMETRY
+// =====================================================
 
 export async function POST(
   req: NextRequest
 ) {
   try {
+    // -----------------------------------------
+    // CONNECT DATABASE
+    // -----------------------------------------
+
     await connectDB();
 
-    const body = await req.json();
+    // -----------------------------------------
+    // READ REQUEST
+    // -----------------------------------------
+
+    const body =
+      await req.json();
 
     const {
       deviceId,
+
+      // Device information sent by ESP32.
+      // IMPORTANT:
+      // "name" is NOT used to update an
+      // existing configured device name.
       name,
+
       type,
       location,
       macAddress,
@@ -91,7 +151,6 @@ export async function POST(
       freeHeap,
       uptime,
 
-      // NEW
       sensors,
     } = body;
 
@@ -106,7 +165,8 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "deviceId is required",
+          error:
+            "deviceId is required",
         },
         {
           status: 400,
@@ -121,7 +181,8 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
-          error: "deviceId cannot be empty",
+          error:
+            "deviceId cannot be empty",
         },
         {
           status: 400,
@@ -137,7 +198,7 @@ export async function POST(
       normalizeDeviceType(type);
 
     // -----------------------------------------
-    // NORMALIZE SENSORS
+    // NORMALIZE SENSOR DATA
     // -----------------------------------------
 
     const normalizedSensors =
@@ -147,116 +208,184 @@ export async function POST(
     // FIND DEVICE
     // -----------------------------------------
 
-    let device = await Device.findOne({
-      deviceId: normalizedDeviceId,
-    });
+    let device =
+      await Device.findOne({
+        deviceId:
+          normalizedDeviceId,
+      });
 
-    // -----------------------------------------
-    // CREATE DEVICE
-    // -----------------------------------------
+    // =================================================
+    // CREATE NEW DEVICE
+    // =================================================
 
     if (!device) {
-      device = await Device.create({
-        deviceId: normalizedDeviceId,
+      device =
+        await Device.create({
+          deviceId:
+            normalizedDeviceId,
 
-        name:
-          typeof name === "string" &&
-          name.trim()
-            ? name.trim()
-            : normalizedDeviceId,
+          // Only use ESP32 name when the
+          // device is being registered
+          // for the first time.
+          name:
+            typeof name === "string" &&
+            name.trim()
+              ? name.trim()
+              : normalizedDeviceId,
 
-        type: normalizedType,
+          type:
+            normalizedType,
 
-        location:
-          typeof location === "string"
-            ? location.trim()
-            : "",
+          location:
+            typeof location === "string"
+              ? location.trim()
+              : "",
 
-        macAddress:
-          typeof macAddress === "string"
-            ? macAddress.trim()
-            : "",
+          macAddress:
+            typeof macAddress ===
+            "string"
+              ? macAddress.trim()
+              : "",
 
-        firmware:
-          typeof firmware === "string"
-            ? firmware.trim()
-            : "",
+          firmware:
+            typeof firmware ===
+            "string"
+              ? firmware.trim()
+              : "",
 
-        ipAddress:
-          typeof ipAddress === "string"
-            ? ipAddress.trim()
-            : "",
+          ipAddress:
+            typeof ipAddress ===
+            "string"
+              ? ipAddress.trim()
+              : "",
 
-        status: "online",
+          status:
+            "online",
 
-        lastSeen: new Date(),
-      });
+          lastSeen:
+            new Date(),
+        });
 
       console.log(
         `[telemetry] Registered new device: ${normalizedDeviceId}`
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // UPDATE EXISTING DEVICE
-    // -----------------------------------------
+    // =================================================
 
     else {
-      device.status = "online";
-      device.lastSeen = new Date();
+      // -----------------------------------------
+      // ONLINE STATUS
+      // -----------------------------------------
 
-      if (
-        typeof name === "string" &&
-        name.trim()
-      ) {
-        device.name =
-          name.trim();
-      }
+      device.status =
+        "online";
+
+      // -----------------------------------------
+      // LAST SEEN
+      // -----------------------------------------
+
+      device.lastSeen =
+        new Date();
+
+      // -----------------------------------------
+      // IMPORTANT:
+      //
+      // DO NOT UPDATE device.name HERE.
+      //
+      // The website configuration owns
+      // the device name.
+      //
+      // ESP32 may continue sending:
+      //
+      // name: "ESP32 Device"
+      //
+      // but that value must NOT overwrite:
+      //
+      // name: "Monitoring Device Test 1"
+      // -----------------------------------------
+
+      // NO:
+      //
+      // device.name = name.trim();
+      //
+      // -----------------------------------------
+
+      // -----------------------------------------
+      // UPDATE DEVICE TYPE
+      // -----------------------------------------
 
       device.type =
         normalizedType;
 
+      // -----------------------------------------
+      // UPDATE LOCATION
+      // -----------------------------------------
+
       if (
-        typeof location === "string" &&
+        typeof location ===
+          "string" &&
         location.trim()
       ) {
         device.location =
           location.trim();
       }
 
+      // -----------------------------------------
+      // UPDATE MAC ADDRESS
+      // -----------------------------------------
+
       if (
-        typeof macAddress === "string" &&
+        typeof macAddress ===
+          "string" &&
         macAddress.trim()
       ) {
         device.macAddress =
           macAddress.trim();
       }
 
+      // -----------------------------------------
+      // UPDATE FIRMWARE
+      // -----------------------------------------
+
       if (
-        typeof firmware === "string" &&
+        typeof firmware ===
+          "string" &&
         firmware.trim()
       ) {
         device.firmware =
           firmware.trim();
       }
 
+      // -----------------------------------------
+      // UPDATE IP ADDRESS
+      // -----------------------------------------
+
       if (
-        typeof ipAddress === "string" &&
+        typeof ipAddress ===
+          "string" &&
         ipAddress.trim()
       ) {
         device.ipAddress =
           ipAddress.trim();
       }
 
+      // -----------------------------------------
+      // SAVE DEVICE
+      // -----------------------------------------
+
       await device.save();
     }
 
-    // -----------------------------------------
+    // =================================================
     // SAVE TELEMETRY
-    // -----------------------------------------
+    // =================================================
 
     await DeviceLog.create({
-      deviceId: normalizedDeviceId,
+      deviceId:
+        normalizedDeviceId,
 
       temperature:
         typeof temperature === "number"
@@ -313,27 +442,49 @@ export async function POST(
           ? uptime
           : undefined,
 
-      // ---------------------------------------
-      // SENSOR ARRAY
-      // ---------------------------------------
-
-      sensors: normalizedSensors,
+      sensors:
+        normalizedSensors,
     });
 
+    // =================================================
+    // LOG
+    // =================================================
+
     console.log(
-      `[telemetry] ${normalizedDeviceId}: saved ${normalizedSensors.length} sensors`
+      `[telemetry] ${normalizedDeviceId}`
     );
 
-    // -----------------------------------------
+    console.log(
+      `  configured name: ${device.name}`
+    );
+
+    console.log(
+      `  sensors: ${normalizedSensors.length}`
+    );
+
+    console.log(
+      `  IP: ${device.ipAddress || "-"}`
+    );
+
+    // =================================================
     // RESPONSE
-    // -----------------------------------------
+    // =================================================
 
     return NextResponse.json({
       success: true,
-      message: "Telemetry received",
-      deviceId: normalizedDeviceId,
+
+      message:
+        "Telemetry received",
+
+      deviceId:
+        normalizedDeviceId,
+
+      deviceName:
+        device.name,
+
       sensorCount:
         normalizedSensors.length,
+
       timestamp:
         new Date().toISOString(),
     });
@@ -346,7 +497,8 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
-        error: "Internal Server Error",
+        error:
+          "Internal Server Error",
       },
       {
         status: 500,
