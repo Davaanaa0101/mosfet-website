@@ -1,6 +1,7 @@
 import DeviceHeader from "@/components/device/DeviceHeader";
 import DeviceStatusCard from "@/components/device/DeviceStatusCard";
 import DeviceTelemetry from "@/components/device/DeviceTelemetry";
+import SensorGrid from "@/components/device/SensorGrid";
 
 interface Props {
   params: Promise<{
@@ -15,13 +16,12 @@ export default async function DevicePage({
 
   return (
     <div className="space-y-8">
-      {/* Device Header */}
       <DeviceHeader deviceId={id} />
 
-      {/* Live Status */}
       <DeviceStatusCard deviceId={id} />
 
-      {/* Telemetry Charts */}
+      <SensorGrid deviceId={id} />
+
       <DeviceTelemetry deviceId={id} />
     </div>
   );
