@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 
 import {
   Card,
@@ -9,6 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// =====================================================
+// SENSOR CONFIGURATION
+// =====================================================
+
 interface SensorConfig {
   slot: number;
   type: string;
@@ -16,43 +24,106 @@ interface SensorConfig {
   unit?: string;
 }
 
+// =====================================================
+// DEVICE CONFIGURATION
+// =====================================================
+
 interface DeviceConfig {
+  success?: boolean;
+
   deviceId: string;
+
   deviceName: string;
+
   sendInterval: number;
+
   sensors: SensorConfig[];
+
+  error?: string;
 }
+
+// =====================================================
+// SENSOR TELEMETRY
+// =====================================================
 
 interface SensorValue {
   slot: number;
+
   type: string;
-  value?: number | null;
+
+  value:
+    | number
+    | null
+    | undefined;
 }
 
+// =====================================================
+// TELEMETRY
+// =====================================================
+
 interface Telemetry {
-  sensors?: SensorValue[];
+  _id?: string;
+
+  deviceId?: string;
+
   createdAt: string;
+
+  sensors?: SensorValue[];
+
+  temperature?: number | null;
+
+  humidity?: number | null;
+
+  current?: number | null;
+
+  voltage?: number | null;
+
+  power?: number | null;
+
+  energy?: number | null;
 }
+
+// =====================================================
+// TELEMETRY RESPONSE
+// =====================================================
 
 interface TelemetryResponse {
   success: boolean;
+
   deviceId: string;
+
   data: Telemetry[];
+
   error?: string;
 }
+
+// =====================================================
+// PROPS
+// =====================================================
 
 interface Props {
   deviceId: string;
 }
 
+// =====================================================
+// SENSOR NAME
+// =====================================================
+
 function getSensorName(
   sensor: SensorConfig
 ): string {
-  if (sensor.name?.trim()) {
+  if (
+    typeof sensor.name === "string" &&
+    sensor.name.trim()
+  ) {
     return sensor.name.trim();
   }
 
-  switch (sensor.type) {
+  switch (
+    sensor.type
+      .trim()
+      .toUpperCase()
+  ) {
     case "TEMPERATURE":
       return `DS18B20 #${sensor.slot}`;
 
@@ -74,22 +145,43 @@ function getSensorName(
     case "POWER":
       return "Power";
 
+    case "ENERGY":
+      return "Energy";
+
     case "N/A":
-      return `Sensor #${sensor.slot}`;
+      return "Unused";
 
     default:
       return `Sensor #${sensor.slot}`;
   }
 }
 
+// =====================================================
+// SENSOR UNIT
+// =====================================================
+
 function getSensorUnit(
   sensor: SensorConfig
 ): string {
-  if (sensor.unit?.trim()) {
+  // -----------------------------------------
+  // Use configured unit first
+  // -----------------------------------------
+
+  if (
+    typeof sensor.unit === "string"
+  ) {
     return sensor.unit.trim();
   }
 
-  switch (sensor.type) {
+  // -----------------------------------------
+  // Otherwise use type default
+  // -----------------------------------------
+
+  switch (
+    sensor.type
+      .trim()
+      .toUpperCase()
+  ) {
     case "TEMPERATURE":
     case "DHT_TEMPERATURE":
       return "°C";
@@ -106,15 +198,42 @@ function getSensorUnit(
     case "POWER":
       return "W";
 
+    case "ENERGY":
+      return "kWh";
+
     default:
       return "";
   }
 }
 
-function formatValue(
+// =====================================================
+// FORMAT SENSOR VALUE
+// =====================================================
+
+function formatSensorValue(
   sensor: SensorConfig,
-  value: number | null | undefined
+  value:
+    | number
+    | null
+    | undefined
 ): string {
+  // -----------------------------------------
+  // N/A SENSOR
+  // -----------------------------------------
+
+  if (
+    sensor.type
+      .trim()
+      .toUpperCase() ===
+    "N/A"
+  ) {
+    return "N/A";
+  }
+
+  // -----------------------------------------
+  // NO VALUE
+  // -----------------------------------------
+
   if (
     value === null ||
     value === undefined ||
@@ -123,30 +242,88 @@ function formatValue(
     return "N/A";
   }
 
-  if (sensor.type === "CONTACT") {
-    return value === 1 ? "ON" : "OFF";
+  // -----------------------------------------
+  // CONTACT
+  // -----------------------------------------
+
+  if (
+    sensor.type
+      .trim()
+      .toUpperCase() ===
+    "CONTACT"
+  ) {
+    return value === 1
+      ? "ON"
+      : "OFF";
   }
 
-  const unit = getSensorUnit(sensor);
+  // -----------------------------------------
+  // NUMBER FORMAT
+  // -----------------------------------------
+
+  const type =
+    sensor.type
+      .trim()
+      .toUpperCase();
+
+  let decimals = 2;
+
+  if (
+    type === "TEMPERATURE" ||
+    type === "DHT_TEMPERATURE" ||
+    type === "DHT_HUMIDITY"
+  ) {
+    decimals = 1;
+  }
+
+  if (
+    type === "VOLTAGE"
+  ) {
+    decimals = 1;
+  }
+
+  if (
+    type === "CURRENT"
+  ) {
+    decimals = 2;
+  }
+
+  if (
+    type === "POWER"
+  ) {
+    decimals = 1;
+  }
 
   const formatted =
-    Number.isInteger(value)
-      ? String(value)
-      : value.toFixed(2);
+    value.toFixed(decimals);
 
-  return unit
-    ? `${formatted} ${unit}`
-    : formatted;
+  const unit =
+    getSensorUnit(sensor);
+
+  if (!unit) {
+    return formatted;
+  }
+
+  return `${formatted} ${unit}`;
 }
+
+// =====================================================
+// COMPONENT
+// =====================================================
 
 export default function SensorGrid({
   deviceId,
 }: Props) {
   const [config, setConfig] =
-    useState<DeviceConfig | null>(null);
+    useState<DeviceConfig | null>(
+      null
+    );
 
   const [values, setValues] =
     useState<SensorValue[]>([]);
+
+  const [lastUpdated, setLastUpdated] =
+    useState<string | null>(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -154,106 +331,138 @@ export default function SensorGrid({
   const [error, setError] =
     useState<string | null>(null);
 
+  // ===================================================
+  // LOAD CONFIG + TELEMETRY
+  // ===================================================
+
   const loadData = useCallback(
     async () => {
       try {
-        const encodedDeviceId =
-          encodeURIComponent(deviceId);
+        // -------------------------------------------
+        // CONFIG
+        // -------------------------------------------
 
-        const [
-          configResponse,
-          telemetryResponse,
-        ] = await Promise.all([
-          // ---------------------------------------
-          // DEVICE CONFIGURATION
-          // ---------------------------------------
-          fetch(
-            `/api/devices/${encodedDeviceId}/config`,
+        const configResponse =
+          await fetch(
+            `/api/devices/${encodeURIComponent(
+              deviceId
+            )}/config`,
             {
+              method: "GET",
+
               cache: "no-store",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
             }
-          ),
-
-          // ---------------------------------------
-          // LATEST TELEMETRY
-          // ---------------------------------------
-          fetch(
-            `/api/devices/${encodedDeviceId}/telemetry?limit=1`,
-            {
-              cache: "no-store",
-            }
-          ),
-        ]);
-
-        // -----------------------------------------
-        // CONFIG RESPONSE
-        // -----------------------------------------
-
-        if (!configResponse.ok) {
-          const configText =
-            await configResponse.text();
-
-          console.error(
-            "[SensorGrid] Config request failed:",
-            configResponse.status,
-            configText
           );
 
+        if (
+          !configResponse.ok
+        ) {
           throw new Error(
             "Failed to load device configuration"
           );
         }
 
-        // -----------------------------------------
-        // TELEMETRY RESPONSE
-        // -----------------------------------------
+        const deviceConfig =
+          (await configResponse.json()) as DeviceConfig;
 
-        if (!telemetryResponse.ok) {
-          const telemetryText =
-            await telemetryResponse.text();
+        if (
+          deviceConfig.success ===
+            false
+        ) {
+          throw new Error(
+            deviceConfig.error ||
+              "Failed to load device configuration"
+          );
+        }
 
-          console.error(
-            "[SensorGrid] Telemetry request failed:",
-            telemetryResponse.status,
-            telemetryText
+        // -------------------------------------------
+        // TELEMETRY
+        // -------------------------------------------
+
+        const telemetryResponse =
+          await fetch(
+            `/api/devices/${encodeURIComponent(
+              deviceId
+            )}/telemetry?limit=1`,
+            {
+              method: "GET",
+
+              cache: "no-store",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
           );
 
+        if (
+          !telemetryResponse.ok
+        ) {
           throw new Error(
             "Failed to load sensor telemetry"
           );
         }
 
-        // -----------------------------------------
-        // PARSE RESPONSES
-        // -----------------------------------------
-
-        const deviceConfig =
-          (await configResponse.json()) as DeviceConfig;
-
         const telemetry =
           (await telemetryResponse.json()) as TelemetryResponse;
 
-        if (!telemetry.success) {
+        if (
+          !telemetry.success
+        ) {
           throw new Error(
             telemetry.error ||
-              "Failed to load telemetry"
+              "Failed to load sensor telemetry"
           );
         }
 
-        // -----------------------------------------
-        // LATEST TELEMETRY
-        // -----------------------------------------
+        // -------------------------------------------
+        // LATEST RECORD
+        // -------------------------------------------
+
+        const records =
+          telemetry.data ?? [];
 
         const latest =
-          telemetry.data?.[
-            telemetry.data.length - 1
-          ];
+          records.length > 0
+            ? records[
+                records.length - 1
+              ]
+            : null;
 
-        setConfig(deviceConfig);
+        // -------------------------------------------
+        // SAVE CONFIG
+        // -------------------------------------------
+
+        setConfig(
+          deviceConfig
+        );
+
+        // -------------------------------------------
+        // SAVE SENSOR VALUES
+        // -------------------------------------------
 
         setValues(
           latest?.sensors ?? []
         );
+
+        // -------------------------------------------
+        // LAST UPDATED
+        // -------------------------------------------
+
+        setLastUpdated(
+          latest?.createdAt ??
+            null
+        );
+
+        // -------------------------------------------
+        // CLEAR ERROR
+        // -------------------------------------------
 
         setError(null);
       } catch (err) {
@@ -261,6 +470,10 @@ export default function SensorGrid({
           "[SensorGrid]",
           err
         );
+
+        // -------------------------------------------
+        // Don't remove already-loaded data
+        // -------------------------------------------
 
         setError(
           err instanceof Error
@@ -274,28 +487,32 @@ export default function SensorGrid({
     [deviceId]
   );
 
-  // -------------------------------------------
-  // INITIAL LOAD + AUTO REFRESH
-  // -------------------------------------------
+  // ===================================================
+  // INITIAL LOAD + REFRESH
+  // ===================================================
 
   useEffect(() => {
     loadData();
 
-    const interval = setInterval(
-      loadData,
-      10000
-    );
+    const interval =
+      setInterval(
+        loadData,
+        10000
+      );
 
     return () => {
       clearInterval(interval);
     };
   }, [loadData]);
 
-  // -------------------------------------------
-  // LOADING
-  // -------------------------------------------
+  // ===================================================
+  // INITIAL LOADING
+  // ===================================================
 
-  if (loading) {
+  if (
+    loading &&
+    !config
+  ) {
     return (
       <Card>
         <CardHeader>
@@ -313,11 +530,13 @@ export default function SensorGrid({
     );
   }
 
-  // -------------------------------------------
-  // ERROR
-  // -------------------------------------------
+  // ===================================================
+  // CONFIGURATION ERROR
+  // ===================================================
 
-  if (error) {
+  if (
+    !config
+  ) {
     return (
       <Card>
         <CardHeader>
@@ -328,21 +547,36 @@ export default function SensorGrid({
 
         <CardContent>
           <p className="text-sm text-destructive">
-            {error}
+            {error ||
+              "Failed to load sensor configuration"}
           </p>
         </CardContent>
       </Card>
     );
   }
 
-  // -------------------------------------------
+  // ===================================================
   // CONFIGURED SENSORS
-  // -------------------------------------------
+  // ===================================================
 
   const configuredSensors =
-    config?.sensors ?? [];
+    Array.isArray(
+      config.sensors
+    )
+      ? [...config.sensors].sort(
+          (a, b) =>
+            a.slot - b.slot
+        )
+      : [];
 
-  if (configuredSensors.length === 0) {
+  // ===================================================
+  // NO SENSORS
+  // ===================================================
+
+  if (
+    configuredSensors.length ===
+    0
+  ) {
     return (
       <Card>
         <CardHeader>
@@ -360,47 +594,48 @@ export default function SensorGrid({
     );
   }
 
-  // Hide unused N/A slots.
-  const visibleSensors =
-    configuredSensors.filter(
-      (sensor) =>
-        sensor.type !== "N/A"
-    );
-
-  if (visibleSensors.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Sensors
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No active sensors configured.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // -------------------------------------------
+  // ===================================================
   // RENDER
-  // -------------------------------------------
+  // ===================================================
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          Sensors
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>
+              Sensors
+            </CardTitle>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Configured sensor readings
+            </p>
+          </div>
+
+          {error ? (
+            <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700">
+              Refresh issue
+            </span>
+          ) : (
+            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+              Live
+            </span>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent>
+        {/* ----------------------------------------- */}
+        {/* SENSOR GRID */}
+        {/* ----------------------------------------- */}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleSensors.map(
+          {configuredSensors.map(
             (sensor) => {
+              // -------------------------------------
+              // FIND TELEMETRY BY SLOT
+              // -------------------------------------
+
               const reading =
                 values.find(
                   (value) =>
@@ -408,38 +643,147 @@ export default function SensorGrid({
                     sensor.slot
                 );
 
+              // -------------------------------------
+              // VALUE
+              // -------------------------------------
+
+              const value =
+                reading?.value;
+
+              // -------------------------------------
+              // SENSOR NAME
+              // -------------------------------------
+
+              const name =
+                getSensorName(
+                  sensor
+                );
+
+              // -------------------------------------
+              // SENSOR TYPE
+              // -------------------------------------
+
+              const type =
+                sensor.type ||
+                "N/A";
+
+              // -------------------------------------
+              // SENSOR UNIT
+              // -------------------------------------
+
+              const unit =
+                getSensorUnit(
+                  sensor
+                );
+
+              // -------------------------------------
+              // VALUE TEXT
+              // -------------------------------------
+
+              const displayValue =
+                formatSensorValue(
+                  sensor,
+                  value
+                );
+
+              // -------------------------------------
+              // IS N/A?
+              // -------------------------------------
+
+              const isUnused =
+                type
+                  .trim()
+                  .toUpperCase() ===
+                "N/A";
+
               return (
                 <div
-                  key={sensor.slot}
-                  className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  key={
+                    sensor.slot
+                  }
+                  className="rounded-xl border p-4 transition-shadow hover:shadow-md"
                 >
-                  <p className="text-sm text-muted-foreground">
-                    {getSensorName(
-                      sensor
-                    )}
-                  </p>
+                  {/* ----------------------------- */}
+                  {/* HEADER */}
+                  {/* ----------------------------- */}
 
-                  <p className="mt-2 text-2xl font-semibold">
-                    {formatValue(
-                      sensor,
-                      reading?.value
-                    )}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {name}
+                      </p>
 
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      Slot {sensor.slot}
-                    </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Slot{" "}
+                        {sensor.slot}
+                      </p>
+                    </div>
 
-                    <p className="truncate text-xs text-muted-foreground">
-                      {sensor.type}
+                    <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-medium">
+                      {type}
+                    </span>
+                  </div>
+
+                  {/* ----------------------------- */}
+                  {/* VALUE */}
+                  {/* ----------------------------- */}
+
+                  <div className="mt-5">
+                    <p
+                      className={
+                        isUnused
+                          ? "text-2xl font-semibold text-muted-foreground"
+                          : "text-2xl font-semibold"
+                      }
+                    >
+                      {displayValue}
                     </p>
                   </div>
+
+                  {/* ----------------------------- */}
+                  {/* UNIT */}
+                  {/* ----------------------------- */}
+
+                  {!isUnused &&
+                    unit && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Unit:{" "}
+                        {unit}
+                      </p>
+                    )}
                 </div>
               );
             }
           )}
         </div>
+
+        {/* ----------------------------------------- */}
+        {/* LAST UPDATED */}
+        {/* ----------------------------------------- */}
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>
+            {lastUpdated
+              ? `Last update: ${new Date(
+                  lastUpdated
+                ).toLocaleString()}`
+              : "No telemetry received yet"}
+          </span>
+
+          <span>
+            Refresh: 10s
+          </span>
+        </div>
+
+        {/* ----------------------------------------- */}
+        {/* TEMPORARY ERROR */}
+        {/* ----------------------------------------- */}
+
+        {error && (
+          <p className="mt-3 text-xs text-yellow-600">
+            {error}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
