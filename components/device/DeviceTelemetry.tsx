@@ -60,7 +60,10 @@ export default function DeviceTelemetry({
       setData(result.data);
       setError(null);
     } catch (err) {
-      console.error(err);
+      console.error(
+        "[DeviceTelemetry]",
+        err
+      );
 
       setError(
         err instanceof Error
@@ -75,8 +78,6 @@ export default function DeviceTelemetry({
   useEffect(() => {
     loadTelemetry();
 
-    // ESP32 currently sends every 10 seconds.
-    // Refresh dashboard every 10 seconds.
     const interval = setInterval(
       loadTelemetry,
       10000
@@ -111,8 +112,19 @@ export default function DeviceTelemetry({
     );
   }
 
+  if (data.length === 0) {
+    return (
+      <div className="rounded-xl border p-6">
+        <p className="text-muted-foreground">
+          No telemetry data available.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Temperature */}
       <TelemetryChart
         title="Temperature"
         data={data}
@@ -120,6 +132,7 @@ export default function DeviceTelemetry({
         unit="°C"
       />
 
+      {/* Humidity */}
       <TelemetryChart
         title="Humidity"
         data={data}
@@ -127,12 +140,15 @@ export default function DeviceTelemetry({
         unit="%"
       />
 
-      <TelemetryChart
-        title="Current"
-        data={data}
-        dataKey="current"
-        unit="A"
-      />
+      {/* Current */}
+      <div className="lg:col-span-2">
+        <TelemetryChart
+          title="Current"
+          data={data}
+          dataKey="current"
+          unit="A"
+        />
+      </div>
     </div>
   );
 }

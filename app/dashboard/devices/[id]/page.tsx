@@ -8,21 +8,21 @@ interface Props {
   }>;
 }
 
-export default async function DevicePage({ params }: Props) {
+export default async function DevicePage({
+  params,
+}: Props) {
   const { id } = await params;
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Device Header */}
       <DeviceHeader deviceId={id} />
 
-      {/* Status */}
+      {/* Live Status */}
       <DeviceStatusCard deviceId={id} />
 
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <DeviceTelemetry deviceId={id} />
-      </div>
+      {/* Telemetry Charts */}
+      <DeviceTelemetry deviceId={id} />
     </div>
   );
 }
