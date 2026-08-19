@@ -9,8 +9,7 @@ export const auth = betterAuth({
     client,
   }),
 
-  secret:
-    process.env.AUTH_SECRET!,
+  secret: process.env.AUTH_SECRET!,
 
   baseURL:
     process.env.AUTH_URL ||
