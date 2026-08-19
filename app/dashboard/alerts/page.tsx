@@ -3,8 +3,21 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  Thermometer,
+  Droplets,
+  Gauge,
+  Wifi,
+  Server,
+} from "lucide-react";
 
 import {
   Card,
@@ -13,16 +26,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  WifiOff,
-} from "lucide-react";
-
 // =====================================================
 // TYPES
 // =====================================================
+
+type AlertStatus =
+  | "active"
+  | "resolved";
+
+type AlertSeverity =
+  | "critical"
+  | "warning"
+  | "info";
+
+type AlertType =
+  | "DEVICE_OFFLINE"
+  | "HIGH_TEMPERATURE"
+  | "LOW_TEMPERATURE"
+  | "HIGH_HUMIDITY"
+  | "LOW_HUMIDITY"
+  | "HIGH_CURRENT"
+  | "LOW_RSSI";
 
 interface AlertItem {
   _id: string;
@@ -31,20 +55,15 @@ interface AlertItem {
 
   deviceName?: string;
 
-  type: string;
-
-  status:
-    | "active"
-    | "resolved";
+  type: AlertType;
 
   title: string;
 
   message: string;
 
-  severity:
-    | "critical"
-    | "warning"
-    | "info";
+  severity: AlertSeverity;
+
+  status: AlertStatus;
 
   slot?: number;
 
@@ -60,19 +79,17 @@ interface AlertItem {
 
   triggeredAt: string;
 
-  resolvedAt?: string;
+  resolvedAt?: string | null;
+
+  createdAt?: string;
 }
 
 interface AlertsResponse {
   success: boolean;
 
-  stats: {
-    active: number;
-    resolved: number;
-    total: number;
-  };
+  data?: AlertItem[];
 
-  data: AlertItem[];
+  alerts?: AlertItem[];
 
   error?: string;
 }
@@ -85,42 +102,44 @@ export default function AlertsPage() {
   const [alerts, setAlerts] =
     useState<AlertItem[]>([]);
 
-  const [stats, setStats] =
-    useState({
-      active: 0,
-      resolved: 0,
-      total: 0,
-    });
-
-  const [filter, setFilter] =
-    useState<
-      "all" | "active" | "resolved"
-    >("active");
-
   const [loading, setLoading] =
     useState(true);
 
+  const [refreshing, setRefreshing] =
+    useState(false);
+
   const [error, setError] =
-    useState<string | null>(
-      null
-    );
+    useState<string | null>(null);
+
+  const [statusFilter, setStatusFilter] =
+    useState<
+      "all" | AlertStatus
+    >("active");
+
+  const [severityFilter, setSeverityFilter] =
+    useState<
+      "all" | AlertSeverity
+    >("all");
 
   // ===================================================
-  // LOAD
+  // LOAD ALERTS
   // ===================================================
 
   const loadAlerts =
     useCallback(
-      async () => {
+      async (
+        showLoading = false
+      ) => {
         try {
-          const query =
-            filter === "all"
-              ? ""
-              : `?status=${filter}`;
+          if (showLoading) {
+            setLoading(true);
+          } else {
+            setRefreshing(true);
+          }
 
           const response =
             await fetch(
-              `/api/alerts${query}`,
+              "/api/alerts",
               {
                 cache: "no-store",
                 headers: {
@@ -149,16 +168,13 @@ export default function AlertsPage() {
             );
           }
 
-          setAlerts(
-            result.data || []
-          );
+          const alertData =
+            result.data ??
+            result.alerts ??
+            [];
 
-          setStats(
-            result.stats || {
-              active: 0,
-              resolved: 0,
-              total: 0,
-            }
+          setAlerts(
+            alertData
           );
 
           setError(null);
@@ -175,25 +191,29 @@ export default function AlertsPage() {
           );
         } finally {
           setLoading(false);
+          setRefreshing(false);
         }
       },
-      [filter]
+      []
     );
 
   // ===================================================
-  // INITIAL + REFRESH
+  // INITIAL LOAD
   // ===================================================
 
   useEffect(() => {
-    setLoading(true);
+    loadAlerts(true);
+  }, [loadAlerts]);
 
-    loadAlerts();
+  // ===================================================
+  // AUTO REFRESH
+  // ===================================================
 
+  useEffect(() => {
     const interval =
-      setInterval(
-        loadAlerts,
-        10000
-      );
+      setInterval(() => {
+        loadAlerts(false);
+      }, 10000);
 
     return () => {
       clearInterval(
@@ -203,47 +223,118 @@ export default function AlertsPage() {
   }, [loadAlerts]);
 
   // ===================================================
-  // RESOLVE
+  // FILTER
   // ===================================================
 
-  async function resolveAlert(
-    id: string
-  ) {
-    try {
-      const response =
-        await fetch(
-          `/api/alerts/${id}`,
-          {
-            method: "PATCH",
+  const filteredAlerts =
+    useMemo(() => {
+      return alerts
+        .filter((alert) => {
+          if (
+            statusFilter ===
+            "all"
+          ) {
+            return true;
           }
+
+          return (
+            alert.status ===
+            statusFilter
+          );
+        })
+        .filter((alert) => {
+          if (
+            severityFilter ===
+            "all"
+          ) {
+            return true;
+          }
+
+          return (
+            alert.severity ===
+            severityFilter
+          );
+        })
+        .sort(
+          (
+            a,
+            b
+          ) =>
+            new Date(
+              b.triggeredAt
+            ).getTime() -
+            new Date(
+              a.triggeredAt
+            ).getTime()
         );
+    }, [
+      alerts,
+      statusFilter,
+      severityFilter,
+    ]);
 
-      const result =
-        await response.json();
+  // ===================================================
+  // COUNTS
+  // ===================================================
 
-      if (
-        !response.ok ||
-        !result.success
-      ) {
-        throw new Error(
-          result.error ||
-            "Failed to resolve alert"
-        );
-      }
+  const activeCount =
+    alerts.filter(
+      (alert) =>
+        alert.status ===
+        "active"
+    ).length;
 
-      await loadAlerts();
-    } catch (err) {
-      console.error(
-        "[AlertsPage] resolve",
-        err
-      );
+  const criticalCount =
+    alerts.filter(
+      (alert) =>
+        alert.status ===
+          "active" &&
+        alert.severity ===
+          "critical"
+    ).length;
 
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to resolve alert"
-      );
-    }
+  const warningCount =
+    alerts.filter(
+      (alert) =>
+        alert.status ===
+          "active" &&
+        alert.severity ===
+          "warning"
+    ).length;
+
+  const resolvedCount =
+    alerts.filter(
+      (alert) =>
+        alert.status ===
+        "resolved"
+    ).length;
+
+  // ===================================================
+  // LOADING
+  // ===================================================
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">
+            Alerts
+          </h1>
+
+          <p className="mt-1 text-muted-foreground">
+            Monitor sensor and device alerts.
+          </p>
+        </div>
+
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-center text-sm text-muted-foreground">
+              Loading alerts...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // ===================================================
@@ -252,190 +343,265 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-8">
+      {/* ============================================= */}
       {/* HEADER */}
+      {/* ============================================= */}
 
-      <div>
-        <h1 className="text-3xl font-bold">
-          Alerts
-        </h1>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">
+            Alerts
+          </h1>
 
-        <p className="mt-1 text-muted-foreground">
-          Monitor device and sensor alerts.
-        </p>
+          <p className="mt-1 text-muted-foreground">
+            Monitor sensor and device conditions.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            loadAlerts(false)
+          }
+          disabled={refreshing}
+          className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${
+              refreshing
+                ? "animate-spin"
+                : ""
+            }`}
+          />
+
+          Refresh
+        </button>
       </div>
 
-      {/* STATS */}
+      {/* ============================================= */}
+      {/* ERROR */}
+      {/* ============================================= */}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* ============================================= */}
+      {/* SUMMARY */}
+      {/* ============================================= */}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryCard
           title="Active Alerts"
-          value={stats.active}
+          value={activeCount}
           icon={
-            <AlertCircle className="h-5 w-5" />
+            <AlertTriangle className="h-5 w-5" />
           }
-          danger
+          description="Currently active"
         />
 
-        <StatCard
-          title="Resolved"
-          value={stats.resolved}
+        <SummaryCard
+          title="Critical"
+          value={criticalCount}
           icon={
-            <CheckCircle2 className="h-5 w-5" />
+            <AlertTriangle className="h-5 w-5" />
           }
+          description="Immediate attention"
         />
 
-        <StatCard
-          title="Total Alerts"
-          value={stats.total}
+        <SummaryCard
+          title="Warnings"
+          value={warningCount}
           icon={
             <Clock className="h-5 w-5" />
           }
+          description="Requires monitoring"
+        />
+
+        <SummaryCard
+          title="Resolved"
+          value={resolvedCount}
+          icon={
+            <CheckCircle2 className="h-5 w-5" />
+          }
+          description="Alert history"
         />
       </div>
 
-      {/* ALERT LIST */}
+      {/* ============================================= */}
+      {/* FILTERS */}
+      {/* ============================================= */}
 
       <Card>
-        <CardHeader>
+        <CardContent className="pt-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <CardTitle>
-              Alert History
-            </CardTitle>
+            <div>
+              <p className="font-medium">
+                Alert History
+              </p>
 
-            <div className="flex gap-2">
-              <FilterButton
-                active={
-                  filter === "active"
-                }
-                onClick={() =>
-                  setFilter("active")
-                }
-              >
-                Active
-              </FilterButton>
+              <p className="text-sm text-muted-foreground">
+                Showing{" "}
+                {
+                  filteredAlerts.length
+                }{" "}
+                alerts
+              </p>
+            </div>
 
-              <FilterButton
-                active={
-                  filter === "resolved"
+            <div className="flex flex-wrap gap-2">
+              {/* STATUS */}
+
+              <select
+                value={
+                  statusFilter
                 }
-                onClick={() =>
-                  setFilter(
-                    "resolved"
+                onChange={(
+                  event
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value as
+                      | "all"
+                      | AlertStatus
                   )
                 }
+                className="rounded-md border bg-background px-3 py-2 text-sm"
               >
-                Resolved
-              </FilterButton>
+                <option value="active">
+                  Active
+                </option>
 
-              <FilterButton
-                active={
-                  filter === "all"
+                <option value="resolved">
+                  Resolved
+                </option>
+
+                <option value="all">
+                  All
+                </option>
+              </select>
+
+              {/* SEVERITY */}
+
+              <select
+                value={
+                  severityFilter
                 }
-                onClick={() =>
-                  setFilter("all")
+                onChange={(
+                  event
+                ) =>
+                  setSeverityFilter(
+                    event.target
+                      .value as
+                      | "all"
+                      | AlertSeverity
+                  )
                 }
+                className="rounded-md border bg-background px-3 py-2 text-sm"
               >
-                All
-              </FilterButton>
+                <option value="all">
+                  All Severity
+                </option>
+
+                <option value="critical">
+                  Critical
+                </option>
+
+                <option value="warning">
+                  Warning
+                </option>
+
+                <option value="info">
+                  Info
+                </option>
+              </select>
             </div>
           </div>
-        </CardHeader>
-
-        <CardContent>
-          {loading && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Loading alerts...
-            </p>
-          )}
-
-          {!loading &&
-            error && (
-              <p className="py-8 text-center text-sm text-destructive">
-                {error}
-              </p>
-            )}
-
-          {!loading &&
-            !error &&
-            alerts.length ===
-              0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <CheckCircle2 className="h-10 w-10 text-muted-foreground" />
-
-                <p className="mt-3 font-medium">
-                  No alerts
-                </p>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Everything looks good.
-                </p>
-              </div>
-            )}
-
-          {!loading &&
-            !error &&
-            alerts.length >
-              0 && (
-              <div className="space-y-3">
-                {alerts.map(
-                  (alert) => (
-                    <AlertRow
-                      key={
-                        alert._id
-                      }
-                      alert={alert}
-                      onResolve={
-                        resolveAlert
-                      }
-                    />
-                  )
-                )}
-              </div>
-            )}
         </CardContent>
       </Card>
+
+      {/* ============================================= */}
+      {/* ALERT LIST */}
+      {/* ============================================= */}
+
+      {filteredAlerts.length ===
+      0 ? (
+        <Card>
+          <CardContent className="py-16">
+            <div className="flex flex-col items-center justify-center text-center">
+              <CheckCircle2 className="mb-4 h-12 w-12 text-green-500" />
+
+              <h2 className="text-lg font-semibold">
+                No alerts
+              </h2>
+
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                There are no alerts matching the current filters.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {filteredAlerts.map(
+            (alert) => (
+              <AlertCard
+                key={
+                  alert._id
+                }
+                alert={alert}
+              />
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // =====================================================
-// STAT CARD
+// SUMMARY CARD
 // =====================================================
 
-function StatCard({
+function SummaryCard({
   title,
   value,
+  description,
   icon,
-  danger = false,
 }: {
   title: string;
+
   value: number;
+
+  description: string;
+
   icon: React.ReactNode;
-  danger?: boolean;
 }) {
   return (
     <Card>
-      <CardContent className="flex items-center justify-between p-6">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {title}
-          </p>
+      <CardContent className="pt-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              {title}
+            </p>
 
-          <p
-            className={[
-              "mt-2 text-3xl font-bold",
-              danger &&
-                value > 0
-                ? "text-destructive"
-                : "",
-            ].join(" ")}
-          >
-            {value}
-          </p>
-        </div>
+            <p className="mt-1 text-3xl font-bold">
+              {value}
+            </p>
 
-        <div className="rounded-lg bg-muted p-3">
-          {icon}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {description}
+            </p>
+          </div>
+
+          <div className="rounded-lg border p-3">
+            {icon}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -443,152 +609,333 @@ function StatCard({
 }
 
 // =====================================================
-// FILTER BUTTON
+// ALERT CARD
 // =====================================================
 
-function FilterButton({
-  active,
-  onClick,
-  children,
+function AlertCard({
+  alert,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  alert: AlertItem;
 }) {
+  const icon =
+    getAlertIcon(
+      alert.type
+    );
+
+  const severityClass =
+    getSeverityClass(
+      alert.severity
+    );
+
+  const statusClass =
+    alert.status ===
+    "active"
+      ? "border-red-500/30"
+      : "border-green-500/30";
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-        active
-          ? "bg-primary text-primary-foreground"
-          : "bg-background hover:bg-muted",
-      ].join(" ")}
+    <Card
+      className={`border ${statusClass}`}
     >
-      {children}
-    </button>
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          {/* ========================================= */}
+          {/* LEFT */}
+          {/* ========================================= */}
+
+          <div className="flex min-w-0 gap-4">
+            <div
+              className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${severityClass}`}
+            >
+              {icon}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">
+                  {alert.title}
+                </h3>
+
+                <SeverityBadge
+                  severity={
+                    alert.severity
+                  }
+                />
+
+                <StatusBadge
+                  status={
+                    alert.status
+                  }
+                />
+              </div>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                {alert.message}
+              </p>
+
+              {/* DEVICE */}
+
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <span>
+                  Device:{" "}
+                  <strong className="font-medium text-foreground">
+                    {alert.deviceName ||
+                      alert.deviceId}
+                  </strong>
+                </span>
+
+                {alert.sensorName && (
+                  <span>
+                    Sensor:{" "}
+                    <strong className="font-medium text-foreground">
+                      {
+                        alert.sensorName
+                      }
+                    </strong>
+                  </span>
+                )}
+
+                {typeof alert.slot ===
+                  "number" && (
+                  <span>
+                    Slot:{" "}
+                    <strong className="font-medium text-foreground">
+                      {
+                        alert.slot
+                      }
+                    </strong>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================= */}
+          {/* RIGHT */}
+          {/* ========================================= */}
+
+          <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+            {/* VALUE */}
+
+            {typeof alert.value ===
+              "number" && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">
+                  Current value
+                </p>
+
+                <p className="text-lg font-semibold">
+                  {formatNumber(
+                    alert.value
+                  )}{" "}
+                  {alert.unit ||
+                    ""}
+                </p>
+              </div>
+            )}
+
+            {/* THRESHOLD */}
+
+            {typeof alert.threshold ===
+              "number" && (
+              <p className="text-xs text-muted-foreground">
+                Threshold:{" "}
+                <span className="font-medium text-foreground">
+                  {formatNumber(
+                    alert.threshold
+                  )}{" "}
+                  {alert.unit ||
+                    ""}
+                </span>
+              </p>
+            )}
+
+            {/* TIME */}
+
+            <p className="text-xs text-muted-foreground">
+              {alert.status ===
+              "resolved"
+                ? "Resolved"
+                : "Triggered"}{" "}
+              {formatDate(
+                alert.status ===
+                  "resolved" &&
+                  alert.resolvedAt
+                  ? alert.resolvedAt
+                  : alert.triggeredAt
+              )}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 // =====================================================
-// ALERT ROW
+// SEVERITY BADGE
 // =====================================================
 
-function AlertRow({
-  alert,
-  onResolve,
+function SeverityBadge({
+  severity,
 }: {
-  alert: AlertItem;
-  onResolve: (
-    id: string
-  ) => void;
+  severity: AlertSeverity;
 }) {
-  const critical =
-    alert.severity ===
-    "critical";
-
-  const warning =
-    alert.severity ===
-    "warning";
+  const classes =
+    severity ===
+    "critical"
+      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+      : severity ===
+        "warning"
+      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
+      : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
 
   return (
-    <div className="rounded-lg border p-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex gap-3">
-          <div
-            className={[
-              "mt-0.5 rounded-full p-2",
-              critical
-                ? "bg-destructive/10 text-destructive"
-                : warning
-                ? "bg-yellow-500/10 text-yellow-600"
-                : "bg-muted text-muted-foreground",
-            ].join(" ")}
-          >
-            {alert.type ===
-            "DEVICE_OFFLINE" ? (
-              <WifiOff className="h-5 w-5" />
-            ) : (
-              <AlertCircle className="h-5 w-5" />
-            )}
-          </div>
+    <span
+      className={`rounded-full px-2.5 py-1 text-xs font-medium ${classes}`}
+    >
+      {capitalize(
+        severity
+      )}
+    </span>
+  );
+}
 
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold">
-                {alert.title}
-              </h3>
+// =====================================================
+// STATUS BADGE
+// =====================================================
 
-              <span
-                className={[
-                  "rounded-full px-2 py-0.5 text-xs font-medium",
-                  critical
-                    ? "bg-destructive/10 text-destructive"
-                    : warning
-                    ? "bg-yellow-500/10 text-yellow-700"
-                    : "bg-muted text-muted-foreground",
-                ].join(" ")}
-              >
-                {alert.severity}
-              </span>
+function StatusBadge({
+  status,
+}: {
+  status: AlertStatus;
+}) {
+  return (
+    <span
+      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+        status === "active"
+          ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+          : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+      }`}
+    >
+      {capitalize(
+        status
+      )}
+    </span>
+  );
+}
 
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                {alert.status}
-              </span>
-            </div>
+// =====================================================
+// ALERT ICON
+// =====================================================
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {alert.message}
-            </p>
+function getAlertIcon(
+  type: AlertType
+) {
+  switch (type) {
+    case "HIGH_TEMPERATURE":
+    case "LOW_TEMPERATURE":
+      return (
+        <Thermometer className="h-5 w-5" />
+      );
 
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <span>
-                Device:{" "}
-                {alert.deviceName ||
-                  alert.deviceId}
-              </span>
+    case "HIGH_HUMIDITY":
+    case "LOW_HUMIDITY":
+      return (
+        <Droplets className="h-5 w-5" />
+      );
 
-              {alert.sensorName && (
-                <span>
-                  Sensor:{" "}
-                  {alert.sensorName}
-                </span>
-              )}
+    case "HIGH_CURRENT":
+      return (
+        <Gauge className="h-5 w-5" />
+      );
 
-              {alert.value !=
-                null && (
-                <span>
-                  Value:{" "}
-                  {alert.value}{" "}
-                  {alert.unit}
-                </span>
-              )}
+    case "LOW_RSSI":
+      return (
+        <Wifi className="h-5 w-5" />
+      );
 
-              <span>
-                {new Date(
-                  alert.triggeredAt
-                ).toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
+    case "DEVICE_OFFLINE":
+      return (
+        <Server className="h-5 w-5" />
+      );
 
-        {alert.status ===
-          "active" && (
-          <button
-            type="button"
-            onClick={() =>
-              onResolve(
-                alert._id
-              )
-            }
-            className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted"
-          >
-            Resolve
-          </button>
-        )}
-      </div>
-    </div>
+    default:
+      return (
+        <AlertTriangle className="h-5 w-5" />
+      );
+  }
+}
+
+// =====================================================
+// SEVERITY COLOR
+// =====================================================
+
+function getSeverityClass(
+  severity: AlertSeverity
+) {
+  switch (severity) {
+    case "critical":
+      return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400";
+
+    case "warning":
+      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400";
+
+    default:
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
+  }
+}
+
+// =====================================================
+// FORMAT NUMBER
+// =====================================================
+
+function formatNumber(
+  value: number
+) {
+  if (
+    Number.isInteger(value)
+  ) {
+    return String(value);
+  }
+
+  return value.toFixed(2);
+}
+
+// =====================================================
+// FORMAT DATE
+// =====================================================
+
+function formatDate(
+  value?: string | null
+) {
+  if (!value) {
+    return "—";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "—";
+  }
+
+  return date.toLocaleString();
+}
+
+// =====================================================
+// CAPITALIZE
+// =====================================================
+
+function capitalize(
+  value: string
+) {
+  return (
+    value.charAt(0).toUpperCase() +
+    value.slice(1)
   );
 }
