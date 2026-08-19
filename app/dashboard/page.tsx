@@ -1,4 +1,5 @@
 import DeviceStatus from "@/components/dashboard/DeviceStatus";
+import LatestTelemetry from "@/components/dashboard/LatestTelemetry";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import StatsGrid from "@/components/dashboard/StatsGrid";
 
@@ -16,6 +17,8 @@ export default function DashboardPage() {
       </div>
 
       <StatsGrid />
+
+      <LatestTelemetry />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <DeviceStatus />
