@@ -1,8 +1,6 @@
 "use client";
 
-import {
-  useMemo,
-} from "react";
+import { useMemo } from "react";
 
 import {
   Card,
@@ -30,6 +28,8 @@ interface ChartData {
 
   time?: string;
 
+  value?: number | null;
+
   temperature?: number | null;
 
   humidity?: number | null;
@@ -49,6 +49,7 @@ interface TelemetryChartProps {
   data: ChartData[];
 
   dataKey:
+    | "value"
     | "temperature"
     | "humidity"
     | "voltage"
@@ -77,20 +78,26 @@ export default function TelemetryChart({
     useMemo(() => {
       return data
         .map((item) => {
-          const value =
+          const rawValue =
             item[dataKey];
+
+          const numericValue =
+            typeof rawValue ===
+              "number" &&
+            Number.isFinite(
+              rawValue
+            )
+              ? rawValue
+              : null;
 
           return {
             ...item,
 
             value:
-              typeof value ===
-                "number" &&
-              Number.isFinite(
-                value
-              )
-                ? value
-                : null,
+              numericValue,
+
+            chartValue:
+              numericValue,
 
             time:
               item.time ||
@@ -101,7 +108,8 @@ export default function TelemetryChart({
         })
         .filter(
           (item) =>
-            item.value !== null
+            item.chartValue !==
+            null
         );
     }, [
       data,
@@ -109,7 +117,7 @@ export default function TelemetryChart({
     ]);
 
   // ===================================================
-  // EMPTY
+  // EMPTY STATE
   // ===================================================
 
   if (
@@ -126,7 +134,8 @@ export default function TelemetryChart({
         <CardContent>
           <div className="flex h-[300px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
-              No {title.toLowerCase()} data available.
+              No {title.toLowerCase()}{" "}
+              data available.
             </p>
           </div>
         </CardContent>
@@ -135,7 +144,7 @@ export default function TelemetryChart({
   }
 
   // ===================================================
-  // RENDER
+  // CHART
   // ===================================================
 
   return (
@@ -157,22 +166,22 @@ export default function TelemetryChart({
               margin={{
                 top: 10,
                 right: 20,
-                left: 0,
+                left: 5,
                 bottom: 5,
               }}
             >
-              {/* ----------------------------------- */}
+              {/* ================================= */}
               {/* GRID */}
-              {/* ----------------------------------- */}
+              {/* ================================= */}
 
               <CartesianGrid
                 strokeDasharray="3 3"
                 className="stroke-muted"
               />
 
-              {/* ----------------------------------- */}
+              {/* ================================= */}
               {/* X AXIS */}
-              {/* ----------------------------------- */}
+              {/* ================================= */}
 
               <XAxis
                 dataKey="time"
@@ -184,63 +193,84 @@ export default function TelemetryChart({
                 }}
               />
 
-              {/* ----------------------------------- */}
+              {/* ================================= */}
               {/* Y AXIS */}
-              {/* ----------------------------------- */}
+              {/* ================================= */}
 
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={55}
+                width={65}
                 tick={{
                   fontSize: 12,
                 }}
                 tickFormatter={(
-                  value
+                  value: number
                 ) =>
-                  `${value}${unit}`
+                  unit
+                    ? `${value} ${unit}`
+                    : String(
+                        value
+                      )
                 }
               />
 
-              {/* ----------------------------------- */}
+              {/* ================================= */}
               {/* TOOLTIP */}
-              {/* ----------------------------------- */}
+              {/* ================================= */}
 
               <Tooltip
                 formatter={(
-                  value
+                  rawValue
                 ) => {
-                  if (
-                    typeof value ===
+                  const value =
+                    typeof rawValue ===
                     "number"
+                      ? rawValue
+                      : Number(
+                          rawValue
+                        );
+
+                  if (
+                    Number.isFinite(
+                      value
+                    )
                   ) {
                     return [
-                      `${value.toFixed(
-                        2
-                      )} ${unit}`,
+                      unit
+                        ? `${value.toFixed(
+                            2
+                          )} ${unit}`
+                        : value.toFixed(
+                            2
+                          ),
                       title,
                     ];
                   }
 
                   return [
-                    value,
+                    String(
+                      rawValue
+                    ),
                     title,
                   ];
                 }}
                 labelFormatter={(
                   label
                 ) =>
-                  `Time: ${label}`
+                  `Time: ${String(
+                    label
+                  )}`
                 }
               />
 
-              {/* ----------------------------------- */}
+              {/* ================================= */}
               {/* LINE */}
-              {/* ----------------------------------- */}
+              {/* ================================= */}
 
               <Line
                 type="monotone"
-                dataKey="value"
+                dataKey="chartValue"
                 name={title}
                 dot={false}
                 strokeWidth={2}
@@ -255,9 +285,9 @@ export default function TelemetryChart({
           </ResponsiveContainer>
         </div>
 
-        {/* ----------------------------------------- */}
-        {/* SUMMARY */}
-        {/* ----------------------------------------- */}
+        {/* ========================================= */}
+        {/* FOOTER */}
+        {/* ========================================= */}
 
         <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
           <span>
@@ -266,7 +296,8 @@ export default function TelemetryChart({
           </span>
 
           <span>
-            Unit: {unit}
+            Unit:{" "}
+            {unit || "—"}
           </span>
         </div>
       </CardContent>
@@ -275,7 +306,7 @@ export default function TelemetryChart({
 }
 
 // =====================================================
-// FORMAT TIME
+// TIME FORMAT
 // =====================================================
 
 function formatTime(
