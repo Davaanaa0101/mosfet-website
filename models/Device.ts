@@ -50,6 +50,12 @@ export interface IDevice
   lastSeen?: Date;
 
   // -------------------------------------------
+  // DEVICE API KEY
+  // -------------------------------------------
+
+  apiKey?: string;
+
+  // -------------------------------------------
   // DEVICE CONFIGURATION
   // -------------------------------------------
 
@@ -151,6 +157,17 @@ const DeviceSchema =
       lastSeen: Date,
 
       // -----------------------------------------
+      // DEVICE API KEY
+      // -----------------------------------------
+
+      apiKey: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
+      },
+
+      // -----------------------------------------
       // SEND INTERVAL
       // -----------------------------------------
 
@@ -225,6 +242,10 @@ const DeviceSchema =
       timestamps: true,
     }
   );
+
+// ---------------------------------------------
+// EXPORT
+// ---------------------------------------------
 
 export default (mongoose.models.Device ||
   mongoose.model<IDevice>(
