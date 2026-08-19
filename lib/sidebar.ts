@@ -20,16 +20,6 @@ export const sidebarItems = [
     icon: Cpu,
   },
   {
-    title: "Projects",
-    href: "/dashboard/projects",
-    icon: FolderKanban,
-  },
-  {
-    title: "Analytics",
-    href: "/dashboard/analytics",
-    icon: ChartColumn,
-  },
-  {
     title: "Alerts",
     href: "/dashboard/alerts",
     icon: Bell,
