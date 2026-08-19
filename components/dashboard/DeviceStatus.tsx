@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 
 import {
   Card,
@@ -10,39 +10,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-interface Device {
-  _id: string;
+interface DeviceItem {
   deviceId: string;
-  name?: string;
-  type?: string;
-  location?: string;
-  status?: string;
+  deviceName: string;
+  status: "online" | "offline";
   ipAddress?: string;
   lastSeen?: string;
 }
 
-function isOnline(
-  lastSeen?: string
-): boolean {
-  if (!lastSeen) {
-    return false;
-  }
-
-  const timestamp =
-    new Date(lastSeen).getTime();
-
-  if (Number.isNaN(timestamp)) {
-    return false;
-  }
-
-  return (
-    Date.now() - timestamp <= 30_000
-  );
+interface DashboardResponse {
+  success: boolean;
+  devices?: DeviceItem[];
+  error?: string;
 }
 
 export default function DeviceStatus() {
   const [devices, setDevices] =
-    useState<Device[]>([]);
+    useState<DeviceItem[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -50,26 +34,31 @@ export default function DeviceStatus() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const loadDevices = useCallback(
-    async () => {
+  const loadDevices =
+    useCallback(async () => {
       try {
-        const response = await fetch(
-          "/api/devices",
-          {
-            cache: "no-store",
-          }
-        );
+        const response =
+          await fetch(
+            "/api/dashboard/summary",
+            {
+              cache: "no-store",
+            }
+          );
 
-        if (!response.ok) {
+        const result =
+          (await response.json()) as DashboardResponse;
+
+        if (!response.ok || !result.success) {
           throw new Error(
-            "Failed to load devices"
+            result.error ||
+              "Failed to load devices"
           );
         }
 
-        const result =
-          (await response.json()) as Device[];
+        setDevices(
+          result.devices ?? []
+        );
 
-        setDevices(result);
         setError(null);
       } catch (err) {
         console.error(
@@ -85,20 +74,21 @@ export default function DeviceStatus() {
       } finally {
         setLoading(false);
       }
-    },
-    []
-  );
+    }, []);
 
   useEffect(() => {
     loadDevices();
 
-    const interval = setInterval(
-      loadDevices,
-      10000
-    );
+    const interval =
+      setInterval(
+        loadDevices,
+        10000
+      );
 
     return () => {
-      clearInterval(interval);
+      clearInterval(
+        interval
+      );
     };
   }, [loadDevices]);
 
@@ -131,69 +121,59 @@ export default function DeviceStatus() {
             </p>
           )}
 
-        {!loading &&
-          !error &&
-          devices.length > 0 && (
-            <div className="space-y-4">
-              {devices.map((device) => {
-                const online =
-                  isOnline(
-                    device.lastSeen
-                  );
+        <div className="space-y-4">
+          {devices.map(
+            (device) => (
+              <Link
+                key={
+                  device.deviceId
+                }
+                href={`/devices/${encodeURIComponent(
+                  device.deviceId
+                )}`}
+                className="block"
+              >
+                <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                  <div>
+                    <p className="font-medium">
+                      {
+                        device.deviceName
+                      }
+                    </p>
 
-                return (
-                  <div
-                    key={device._id}
-                    className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                  >
-                    <div className="min-w-0">
-                      <Link
-                        href={`/dashboard/devices/${encodeURIComponent(
-                          device.deviceId
-                        )}`}
-                        className="font-medium hover:underline"
-                      >
-                        {device.name ||
-                          device.deviceId}
-                      </Link>
+                    <p className="text-sm text-muted-foreground">
+                      {
+                        device.deviceId
+                      }
+                    </p>
 
-                      <p className="text-sm text-muted-foreground">
-                        {device.deviceId}
+                    {device.ipAddress && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {
+                          device.ipAddress
+                        }
                       </p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {device.location ||
-                          device.ipAddress ||
-                          "No location"}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span
-                        className={`h-2.5 w-2.5 rounded-full ${
-                          online
-                            ? "bg-green-500"
-                            : "bg-gray-400"
-                        }`}
-                      />
-
-                      <span
-                        className={`text-xs font-medium ${
-                          online
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {online
-                          ? "Online"
-                          : "Offline"}
-                      </span>
-                    </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      device.status ===
+                      "online"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                    }`}
+                  >
+                    {device.status ===
+                    "online"
+                      ? "Online"
+                      : "Offline"}
+                  </span>
+                </div>
+              </Link>
+            )
           )}
+        </div>
       </CardContent>
     </Card>
   );
