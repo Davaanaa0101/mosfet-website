@@ -1,6 +1,7 @@
 import DeviceHeader from "@/components/device/DeviceHeader";
 import DeviceStatusCard from "@/components/device/DeviceStatusCard";
 import DeviceTelemetry from "@/components/device/DeviceTelemetry";
+import DeviceConfiguration from "@/components/device/DeviceConfiguration";
 import SensorGrid from "@/components/device/SensorGrid";
 
 interface Props {
@@ -21,6 +22,10 @@ export default async function DevicePage({
       <DeviceStatusCard deviceId={id} />
 
       <SensorGrid deviceId={id} />
+
+      <DeviceConfiguration
+        deviceId={id}
+      />
 
       <DeviceTelemetry deviceId={id} />
     </div>
