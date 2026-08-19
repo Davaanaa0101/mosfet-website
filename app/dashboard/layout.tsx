@@ -1,28 +1,9 @@
-import {
-  redirect,
-} from "next/navigation";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
-import { headers } from "next/headers";
-
-import { auth } from "@/lib/auth";
-
-export default async function DashboardLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session =
-    await auth.api.getSession({
-      headers: await headers(),
-    });
-
-  if (!session?.user) {
-    redirect("/login");
-  }
-
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <DashboardLayout>{children}</DashboardLayout>;
 }
