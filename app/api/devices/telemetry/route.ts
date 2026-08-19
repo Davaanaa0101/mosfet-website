@@ -1,106 +1,68 @@
-import { NextRequest, NextResponse } from "next/server";
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
+import Alert, {
+  AlertType,
+} from "@/models/Alert";
 
 // =====================================================
-// DEVICE TYPES
+// ALERT THRESHOLDS
 // =====================================================
 
-const DEVICE_TYPES = [
-  "esp32",
-  "plc",
-  "modbus",
-  "camera",
+const ALERT_THRESHOLDS = {
+  highTemperature: 30,
+  lowTemperature: 0,
+
+  highHumidity: 80,
+  lowHumidity: 20,
+
+  highCurrent: 10,
+
+  lowRssi: -80,
+};
+
+// =====================================================
+// ALERT TYPES
+// =====================================================
+
+const ALERT_TYPES = [
+  "DEVICE_OFFLINE",
+  "HIGH_TEMPERATURE",
+  "LOW_TEMPERATURE",
+  "HIGH_HUMIDITY",
+  "LOW_HUMIDITY",
+  "HIGH_CURRENT",
+  "LOW_RSSI",
 ] as const;
 
-type DeviceType =
-  (typeof DEVICE_TYPES)[number];
+function isAlertType(
+  value: string
+): value is AlertType {
+  return ALERT_TYPES.includes(
+    value as AlertType
+  );
+}
 
 // =====================================================
-// SENSOR TYPE
+// TYPES
 // =====================================================
 
 interface IncomingSensor {
   slot: number;
   type: string;
-  value: number | null;
+  value?: number | null;
 }
 
-// =====================================================
-// NORMALIZE DEVICE TYPE
-// =====================================================
-
-function normalizeDeviceType(
-  value: unknown
-): DeviceType {
-  if (
-    typeof value === "string" &&
-    DEVICE_TYPES.includes(
-      value.trim().toLowerCase() as DeviceType
-    )
-  ) {
-    return value
-      .trim()
-      .toLowerCase() as DeviceType;
-  }
-
-  return "esp32";
-}
-
-// =====================================================
-// NORMALIZE SENSORS
-// =====================================================
-
-function normalizeSensors(
-  value: unknown
-): IncomingSensor[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter((sensor) => {
-      if (
-        sensor === null ||
-        typeof sensor !== "object"
-      ) {
-        return false;
-      }
-
-      const item =
-        sensor as Record<string, unknown>;
-
-      return (
-        typeof item.slot === "number" &&
-        typeof item.type === "string"
-      );
-    })
-    .map((sensor) => {
-      const item =
-        sensor as Record<string, unknown>;
-
-      return {
-        slot: Number(item.slot),
-
-        type:
-          typeof item.type === "string"
-            ? item.type.trim()
-            : "N/A",
-
-        value:
-          typeof item.value === "number"
-            ? item.value
-            : null,
-      };
-    })
-    .filter(
-      (sensor) =>
-        Number.isInteger(sensor.slot) &&
-        sensor.slot >= 1 &&
-        sensor.slot <= 8
-    );
+interface SensorConfig {
+  slot: number;
+  type: string;
+  name?: string;
+  unit?: string;
 }
 
 // =====================================================
@@ -111,28 +73,14 @@ export async function POST(
   req: NextRequest
 ) {
   try {
-    // -----------------------------------------
-    // CONNECT DATABASE
-    // -----------------------------------------
-
     await connectDB();
-
-    // -----------------------------------------
-    // READ REQUEST
-    // -----------------------------------------
 
     const body =
       await req.json();
 
     const {
       deviceId,
-
-      // Device information sent by ESP32.
-      // IMPORTANT:
-      // "name" is NOT used to update an
-      // existing configured device name.
       name,
-
       type,
       location,
       macAddress,
@@ -154,13 +102,14 @@ export async function POST(
       sensors,
     } = body;
 
-    // -----------------------------------------
+    // =================================================
     // VALIDATE DEVICE ID
-    // -----------------------------------------
+    // =================================================
 
     if (
       !deviceId ||
-      typeof deviceId !== "string"
+      typeof deviceId !==
+        "string"
     ) {
       return NextResponse.json(
         {
@@ -177,7 +126,9 @@ export async function POST(
     const normalizedDeviceId =
       deviceId.trim();
 
-    if (!normalizedDeviceId) {
+    if (
+      !normalizedDeviceId
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -190,23 +141,35 @@ export async function POST(
       );
     }
 
-    // -----------------------------------------
+    // =================================================
     // NORMALIZE DEVICE TYPE
-    // -----------------------------------------
+    // =================================================
 
-    const normalizedType =
-      normalizeDeviceType(type);
+    const deviceTypes = [
+      "esp32",
+      "plc",
+      "modbus",
+      "camera",
+    ] as const;
 
-    // -----------------------------------------
-    // NORMALIZE SENSOR DATA
-    // -----------------------------------------
+    type DeviceType =
+      (typeof deviceTypes)[number];
 
-    const normalizedSensors =
-      normalizeSensors(sensors);
+    const normalizedType: DeviceType =
+      typeof type === "string" &&
+      deviceTypes.includes(
+        type
+          .trim()
+          .toLowerCase() as DeviceType
+      )
+        ? (type
+            .trim()
+            .toLowerCase() as DeviceType)
+        : "esp32";
 
-    // -----------------------------------------
+    // =================================================
     // FIND DEVICE
-    // -----------------------------------------
+    // =================================================
 
     let device =
       await Device.findOne({
@@ -215,7 +178,7 @@ export async function POST(
       });
 
     // =================================================
-    // CREATE NEW DEVICE
+    // CREATE DEVICE
     // =================================================
 
     if (!device) {
@@ -224,11 +187,9 @@ export async function POST(
           deviceId:
             normalizedDeviceId,
 
-          // Only use ESP32 name when the
-          // device is being registered
-          // for the first time.
           name:
-            typeof name === "string" &&
+            typeof name ===
+              "string" &&
             name.trim()
               ? name.trim()
               : normalizedDeviceId,
@@ -237,7 +198,8 @@ export async function POST(
             normalizedType,
 
           location:
-            typeof location === "string"
+            typeof location ===
+            "string"
               ? location.trim()
               : "",
 
@@ -259,8 +221,7 @@ export async function POST(
               ? ipAddress.trim()
               : "",
 
-          status:
-            "online",
+          status: "online",
 
           lastSeen:
             new Date(),
@@ -272,57 +233,27 @@ export async function POST(
     }
 
     // =================================================
-    // UPDATE EXISTING DEVICE
+    // UPDATE DEVICE
     // =================================================
 
     else {
-      // -----------------------------------------
-      // ONLINE STATUS
-      // -----------------------------------------
-
       device.status =
         "online";
-
-      // -----------------------------------------
-      // LAST SEEN
-      // -----------------------------------------
 
       device.lastSeen =
         new Date();
 
-      // -----------------------------------------
-      // IMPORTANT:
-      //
-      // DO NOT UPDATE device.name HERE.
-      //
-      // The website configuration owns
-      // the device name.
-      //
-      // ESP32 may continue sending:
-      //
-      // name: "ESP32 Device"
-      //
-      // but that value must NOT overwrite:
-      //
-      // name: "Monitoring Device Test 1"
-      // -----------------------------------------
-
-      // NO:
-      //
-      // device.name = name.trim();
-      //
-      // -----------------------------------------
-
-      // -----------------------------------------
-      // UPDATE DEVICE TYPE
-      // -----------------------------------------
+      if (
+        typeof name ===
+          "string" &&
+        name.trim()
+      ) {
+        device.name =
+          name.trim();
+      }
 
       device.type =
         normalizedType;
-
-      // -----------------------------------------
-      // UPDATE LOCATION
-      // -----------------------------------------
 
       if (
         typeof location ===
@@ -333,10 +264,6 @@ export async function POST(
           location.trim();
       }
 
-      // -----------------------------------------
-      // UPDATE MAC ADDRESS
-      // -----------------------------------------
-
       if (
         typeof macAddress ===
           "string" &&
@@ -345,10 +272,6 @@ export async function POST(
         device.macAddress =
           macAddress.trim();
       }
-
-      // -----------------------------------------
-      // UPDATE FIRMWARE
-      // -----------------------------------------
 
       if (
         typeof firmware ===
@@ -359,10 +282,6 @@ export async function POST(
           firmware.trim();
       }
 
-      // -----------------------------------------
-      // UPDATE IP ADDRESS
-      // -----------------------------------------
-
       if (
         typeof ipAddress ===
           "string" &&
@@ -372,99 +291,624 @@ export async function POST(
           ipAddress.trim();
       }
 
-      // -----------------------------------------
-      // SAVE DEVICE
-      // -----------------------------------------
-
       await device.save();
     }
+
+    // =================================================
+    // NORMALIZE SENSOR ARRAY
+    // =================================================
+
+    const normalizedSensors: IncomingSensor[] =
+      Array.isArray(sensors)
+        ? sensors
+            .filter(
+              (sensor) =>
+                sensor &&
+                typeof sensor.slot ===
+                  "number" &&
+                typeof sensor.type ===
+                  "string"
+            )
+            .map(
+              (sensor) => ({
+                slot: sensor.slot,
+
+                type:
+                  sensor.type,
+
+                value:
+                  typeof sensor.value ===
+                  "number"
+                    ? sensor.value
+                    : null,
+              })
+            )
+        : [];
 
     // =================================================
     // SAVE TELEMETRY
     // =================================================
 
-    await DeviceLog.create({
-      deviceId:
-        normalizedDeviceId,
+    const telemetry =
+      await DeviceLog.create({
+        deviceId:
+          normalizedDeviceId,
 
-      temperature:
-        typeof temperature === "number"
-          ? temperature
-          : undefined,
+        temperature:
+          typeof temperature ===
+          "number"
+            ? temperature
+            : undefined,
 
-      humidity:
-        typeof humidity === "number"
-          ? humidity
-          : undefined,
+        humidity:
+          typeof humidity ===
+          "number"
+            ? humidity
+            : undefined,
 
-      voltage:
-        typeof voltage === "number"
-          ? voltage
-          : undefined,
+        voltage:
+          typeof voltage ===
+          "number"
+            ? voltage
+            : undefined,
 
-      current:
-        typeof current === "number"
-          ? current
-          : undefined,
+        current:
+          typeof current ===
+          "number"
+            ? current
+            : undefined,
 
-      power:
-        typeof power === "number"
-          ? power
-          : undefined,
+        power:
+          typeof power ===
+          "number"
+            ? power
+            : undefined,
 
-      energy:
-        typeof energy === "number"
-          ? energy
-          : undefined,
+        energy:
+          typeof energy ===
+          "number"
+            ? energy
+            : undefined,
 
-      wifiSSID:
-        typeof wifiSSID === "string"
-          ? wifiSSID
-          : undefined,
+        wifiSSID:
+          typeof wifiSSID ===
+          "string"
+            ? wifiSSID
+            : undefined,
 
-      ipAddress:
-        typeof ipAddress === "string"
-          ? ipAddress
-          : undefined,
+        ipAddress:
+          typeof ipAddress ===
+          "string"
+            ? ipAddress
+            : undefined,
 
-      rssi:
-        typeof rssi === "number"
-          ? rssi
-          : undefined,
+        rssi:
+          typeof rssi ===
+          "number"
+            ? rssi
+            : undefined,
 
-      freeHeap:
-        typeof freeHeap === "number"
-          ? freeHeap
-          : undefined,
+        freeHeap:
+          typeof freeHeap ===
+          "number"
+            ? freeHeap
+            : undefined,
 
-      uptime:
-        typeof uptime === "number"
-          ? uptime
-          : undefined,
+        uptime:
+          typeof uptime ===
+          "number"
+            ? uptime
+            : undefined,
 
-      sensors:
-        normalizedSensors,
-    });
+        sensors:
+          normalizedSensors,
+      });
 
     // =================================================
-    // LOG
+    // LOAD SENSOR CONFIGURATION
     // =================================================
 
-    console.log(
-      `[telemetry] ${normalizedDeviceId}`
-    );
+    const configuredSensors: SensorConfig[] =
+      Array.isArray(
+        (device as any).sensors
+      )
+        ? (device as any).sensors
+        : [];
 
-    console.log(
-      `  configured name: ${device.name}`
-    );
+    // =================================================
+    // SENSOR NAME HELPER
+    // =================================================
 
-    console.log(
-      `  sensors: ${normalizedSensors.length}`
-    );
+    function getSensorName(
+      slot: number
+    ): string {
+      const configured =
+        configuredSensors.find(
+          (sensor) =>
+            sensor.slot ===
+            slot
+        );
 
-    console.log(
-      `  IP: ${device.ipAddress || "-"}`
-    );
+      if (
+        configured?.name
+      ) {
+        return configured.name;
+      }
+
+      return `Sensor #${slot}`;
+    }
+
+    // =================================================
+    // CREATE OR KEEP ACTIVE ALERT
+    // =================================================
+
+    async function activateAlert(
+      options: {
+        type: AlertType;
+
+        title: string;
+
+        message: string;
+
+        severity:
+          | "critical"
+          | "warning"
+          | "info";
+
+        slot?: number;
+
+        sensorType?: string;
+
+        sensorName?: string;
+
+        value?: number;
+
+        threshold?: number;
+
+        unit?: string;
+      }
+    ) {
+      if (
+        !isAlertType(
+          options.type
+        )
+      ) {
+        return;
+      }
+
+      const query: Record<
+        string,
+        unknown
+      > = {
+        deviceId:
+          normalizedDeviceId,
+
+        type: options.type,
+
+        status: "active",
+      };
+
+      if (
+        typeof options.slot ===
+        "number"
+      ) {
+        query.slot =
+          options.slot;
+      }
+
+      const existing =
+        await Alert.findOne(
+          query
+        );
+
+      // Already active
+      if (existing) {
+        return;
+      }
+
+      await Alert.create({
+        deviceId:
+          normalizedDeviceId,
+
+        deviceName:
+          device.name ||
+          normalizedDeviceId,
+
+        type:
+          options.type,
+
+        title:
+          options.title,
+
+        message:
+          options.message,
+
+        severity:
+          options.severity,
+
+        slot:
+          options.slot,
+
+        sensorType:
+          options.sensorType,
+
+        sensorName:
+          options.sensorName,
+
+        value:
+          typeof options.value ===
+          "number"
+            ? options.value
+            : null,
+
+        threshold:
+          typeof options.threshold ===
+          "number"
+            ? options.threshold
+            : null,
+
+        unit:
+          options.unit || "",
+
+        status: "active",
+
+        triggeredAt:
+          new Date(),
+      });
+
+      console.log(
+        `[alerts] Created ${options.type} for ${normalizedDeviceId}`
+      );
+    }
+
+    // =================================================
+    // RESOLVE ALERT
+    // =================================================
+
+    async function resolveAlert(
+      type: AlertType,
+      slot?: number
+    ) {
+      const query: Record<
+        string,
+        unknown
+      > = {
+        deviceId:
+          normalizedDeviceId,
+
+        type,
+
+        status: "active",
+      };
+
+      if (
+        typeof slot ===
+        "number"
+      ) {
+        query.slot = slot;
+      }
+
+      const activeAlert =
+        await Alert.findOne(
+          query
+        );
+
+      if (!activeAlert) {
+        return;
+      }
+
+      activeAlert.status =
+        "resolved";
+
+      activeAlert.resolvedAt =
+        new Date();
+
+      await activeAlert.save();
+
+      console.log(
+        `[alerts] Resolved ${type} for ${normalizedDeviceId}`
+      );
+    }
+
+    // =================================================
+    // CHECK SENSOR VALUES
+    // =================================================
+
+    for (const sensor of normalizedSensors) {
+      if (
+        sensor.value === null ||
+        sensor.value ===
+          undefined ||
+        !Number.isFinite(
+          sensor.value
+        )
+      ) {
+        continue;
+      }
+
+      const value =
+        sensor.value;
+
+      const sensorName =
+        getSensorName(
+          sensor.slot
+        );
+
+      const sensorType =
+        sensor.type.toUpperCase();
+
+      // ===============================================
+      // TEMPERATURE
+      // ===============================================
+
+      if (
+        sensorType ===
+          "TEMPERATURE" ||
+        sensorType ===
+          "DHT_TEMPERATURE"
+      ) {
+        if (
+          value >
+          ALERT_THRESHOLDS.highTemperature
+        ) {
+          await activateAlert({
+            type:
+              "HIGH_TEMPERATURE",
+
+            title:
+              "High Temperature",
+
+            message:
+              `${sensorName} temperature is ${value.toFixed(
+                2
+              )} °C`,
+
+            severity:
+              "critical",
+
+            slot:
+              sensor.slot,
+
+            sensorType:
+              sensor.type,
+
+            sensorName,
+
+            value,
+
+            threshold:
+              ALERT_THRESHOLDS.highTemperature,
+
+            unit: "°C",
+          });
+        } else {
+          await resolveAlert(
+            "HIGH_TEMPERATURE",
+            sensor.slot
+          );
+        }
+
+        if (
+          value <
+          ALERT_THRESHOLDS.lowTemperature
+        ) {
+          await activateAlert({
+            type:
+              "LOW_TEMPERATURE",
+
+            title:
+              "Low Temperature",
+
+            message:
+              `${sensorName} temperature is ${value.toFixed(
+                2
+              )} °C`,
+
+            severity:
+              "warning",
+
+            slot:
+              sensor.slot,
+
+            sensorType:
+              sensor.type,
+
+            sensorName,
+
+            value,
+
+            threshold:
+              ALERT_THRESHOLDS.lowTemperature,
+
+            unit: "°C",
+          });
+        } else {
+          await resolveAlert(
+            "LOW_TEMPERATURE",
+            sensor.slot
+          );
+        }
+      }
+
+      // ===============================================
+      // HUMIDITY
+      // ===============================================
+
+      if (
+        sensorType ===
+        "DHT_HUMIDITY"
+      ) {
+        if (
+          value >
+          ALERT_THRESHOLDS.highHumidity
+        ) {
+          await activateAlert({
+            type:
+              "HIGH_HUMIDITY",
+
+            title:
+              "High Humidity",
+
+            message:
+              `${sensorName} humidity is ${value.toFixed(
+                2
+              )}%`,
+
+            severity:
+              "warning",
+
+            slot:
+              sensor.slot,
+
+            sensorType:
+              sensor.type,
+
+            sensorName,
+
+            value,
+
+            threshold:
+              ALERT_THRESHOLDS.highHumidity,
+
+            unit: "%",
+          });
+        } else {
+          await resolveAlert(
+            "HIGH_HUMIDITY",
+            sensor.slot
+          );
+        }
+
+        if (
+          value <
+          ALERT_THRESHOLDS.lowHumidity
+        ) {
+          await activateAlert({
+            type:
+              "LOW_HUMIDITY",
+
+            title:
+              "Low Humidity",
+
+            message:
+              `${sensorName} humidity is ${value.toFixed(
+                2
+              )}%`,
+
+            severity:
+              "warning",
+
+            slot:
+              sensor.slot,
+
+            sensorType:
+              sensor.type,
+
+            sensorName,
+
+            value,
+
+            threshold:
+              ALERT_THRESHOLDS.lowHumidity,
+
+            unit: "%",
+          });
+        } else {
+          await resolveAlert(
+            "LOW_HUMIDITY",
+            sensor.slot
+          );
+        }
+      }
+    }
+
+    // =================================================
+    // LEGACY / DEVICE CURRENT
+    // =================================================
+
+    if (
+      typeof current ===
+      "number" &&
+      Number.isFinite(
+        current
+      )
+    ) {
+      if (
+        Math.abs(current) >
+        ALERT_THRESHOLDS.highCurrent
+      ) {
+        await activateAlert({
+          type:
+            "HIGH_CURRENT",
+
+          title:
+            "High Current",
+
+          message:
+            `Device current is ${current.toFixed(
+              2
+            )} A`,
+
+          severity:
+            "critical",
+
+          value:
+            current,
+
+          threshold:
+            ALERT_THRESHOLDS.highCurrent,
+
+          unit: "A",
+        });
+      } else {
+        await resolveAlert(
+          "HIGH_CURRENT"
+        );
+      }
+    }
+
+    // =================================================
+    // RSSI
+    // =================================================
+
+    if (
+      typeof rssi ===
+      "number" &&
+      Number.isFinite(
+        rssi
+      )
+    ) {
+      if (
+        rssi <
+        ALERT_THRESHOLDS.lowRssi
+      ) {
+        await activateAlert({
+          type:
+            "LOW_RSSI",
+
+          title:
+            "Weak Wi-Fi Signal",
+
+          message:
+            `Wi-Fi signal is ${rssi} dBm`,
+
+          severity:
+            "warning",
+
+          value:
+            rssi,
+
+          threshold:
+            ALERT_THRESHOLDS.lowRssi,
+
+          unit: "dBm",
+        });
+      } else {
+        await resolveAlert(
+          "LOW_RSSI"
+        );
+      }
+    }
 
     // =================================================
     // RESPONSE
@@ -479,14 +923,16 @@ export async function POST(
       deviceId:
         normalizedDeviceId,
 
-      deviceName:
-        device.name,
-
       sensorCount:
         normalizedSensors.length,
 
       timestamp:
         new Date().toISOString(),
+
+      telemetryId:
+        String(
+          telemetry._id
+        ),
     });
   } catch (error) {
     console.error(
@@ -497,6 +943,7 @@ export async function POST(
     return NextResponse.json(
       {
         success: false,
+
         error:
           "Internal Server Error",
       },
