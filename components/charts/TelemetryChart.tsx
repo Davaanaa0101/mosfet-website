@@ -1,83 +1,128 @@
 "use client";
 
 import {
-  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
-  Tooltip,
+  YAxis,
   CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+interface TelemetryPoint {
+  createdAt: string;
+  temperature?: number;
+  humidity?: number;
+  current?: number;
+  voltage?: number;
+  power?: number;
+}
 
+interface TelemetryChartProps {
+  data: TelemetryPoint[];
+}
 
+function formatTime(value: string) {
+  const date = new Date(value);
 
-interface Props {
-  title: string;
-  data: any[];
-  dataKey: string;
-  unit?: string;
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 }
 
 export default function TelemetryChart({
-  title,
   data,
-  dataKey,
-  unit,
-}: Props) {
+}: TelemetryChartProps) {
+  const chartData = data.map((item) => ({
+    ...item,
+
+    time: formatTime(
+      item.createdAt
+    ),
+
+    temperature:
+      typeof item.temperature === "number"
+        ? item.temperature
+        : null,
+
+    humidity:
+      typeof item.humidity === "number"
+        ? item.humidity
+        : null,
+
+    current:
+      typeof item.current === "number"
+        ? item.current
+        : null,
+
+    voltage:
+      typeof item.voltage === "number"
+        ? item.voltage
+        : null,
+
+    power:
+      typeof item.power === "number"
+        ? item.power
+        : null,
+  }));
+
+  if (chartData.length === 0) {
+    return (
+      <div className="flex h-[350px] items-center justify-center rounded-lg border">
+        <p className="text-muted-foreground">
+          No telemetry data available.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
+    <div className="w-full">
+      <ResponsiveContainer
+        width="100%"
+        height={350}
+      >
+        <LineChart
+          data={chartData}
+          margin={{
+            top: 10,
+            right: 20,
+            left: 10,
+            bottom: 10,
+          }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
 
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
+          <XAxis
+            dataKey="time"
+          />
 
-              <XAxis
-                dataKey="createdAt"
-                tickFormatter={(value) =>
-                  new Date(value).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                }
-              />
+          <YAxis />
 
-              <Tooltip
-  formatter={(value) => {
-    if (value == null) {
-      return ["--", title];
-    }
+          <Tooltip />
 
-    return [unit ? `${value} ${unit}` : String(value), title];
-  }}
-  labelFormatter={(label) => {
-    if (!label) return "";
+          <Line
+            type="monotone"
+            dataKey="temperature"
+            name="Temperature"
+            dot={false}
+            connectNulls
+          />
 
-    return new Date(String(label)).toLocaleString();
-  }}
-/>
-
-              <Line
-                type="monotone"
-                dataKey={dataKey}
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+          <Line
+            type="monotone"
+            dataKey="humidity"
+            name="Humidity"
+            dot={false}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
