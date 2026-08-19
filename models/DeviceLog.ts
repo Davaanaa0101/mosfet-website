@@ -1,18 +1,16 @@
 import mongoose, {
   Schema,
-  Model,
   Document,
+  Model,
 } from "mongoose";
 
 // =====================================================
-// SENSOR VALUE
+// SENSOR
 // =====================================================
 
-export interface IDeviceSensor {
+export interface IDeviceLogSensor {
   slot: number;
-
   type: string;
-
   value?: number | null;
 }
 
@@ -22,7 +20,17 @@ export interface IDeviceSensor {
 
 export interface IDeviceLog
   extends Document {
+  // -----------------------------------------------
+  // DEVICE IDENTITY
+  // -----------------------------------------------
+
   deviceId: string;
+
+  serialId: string;
+
+  // -----------------------------------------------
+  // TELEMETRY
+  // -----------------------------------------------
 
   temperature?: number;
 
@@ -36,29 +44,45 @@ export interface IDeviceLog
 
   energy?: number;
 
+  // -----------------------------------------------
+  // NETWORK
+  // -----------------------------------------------
+
   wifiSSID?: string;
 
   ipAddress?: string;
 
   rssi?: number;
 
+  // -----------------------------------------------
+  // ESP32 SYSTEM
+  // -----------------------------------------------
+
   freeHeap?: number;
 
   uptime?: number;
 
-  // IMPORTANT:
-  // Store ALL configured sensor readings.
-  sensors?: IDeviceSensor[];
+  // -----------------------------------------------
+  // SENSORS
+  // -----------------------------------------------
+
+  sensors: IDeviceLogSensor[];
+
+  // -----------------------------------------------
+  // TIMESTAMPS
+  // -----------------------------------------------
 
   createdAt: Date;
+
+  updatedAt: Date;
 }
 
 // =====================================================
 // SENSOR SCHEMA
 // =====================================================
 
-const DeviceSensorSchema =
-  new Schema<IDeviceSensor>(
+const DeviceLogSensorSchema =
+  new Schema<IDeviceLogSensor>(
     {
       slot: {
         type: Number,
@@ -87,61 +111,143 @@ const DeviceSensorSchema =
 const DeviceLogSchema =
   new Schema<IDeviceLog>(
     {
+      // =================================================
+      // DEVICE ID
+      // =================================================
+
       deviceId: {
         type: String,
         required: true,
         index: true,
+        trim: true,
       },
 
-      temperature:
-        Number,
+      // =================================================
+      // SERIAL ID
+      //
+      // Physical identity of the ESP32.
+      //
+      // Example:
+      //
+      // MOSFET-ESP32-000001
+      // =================================================
 
-      humidity:
-        Number,
+      serialId: {
+        type: String,
+        required: true,
+        index: true,
+        trim: true,
+      },
 
-      voltage:
-        Number,
+      // =================================================
+      // TEMPERATURE
+      // =================================================
 
-      current:
-        Number,
+      temperature: {
+        type: Number,
+      },
 
-      power:
-        Number,
+      // =================================================
+      // HUMIDITY
+      // =================================================
 
-      energy:
-        Number,
+      humidity: {
+        type: Number,
+      },
 
-      wifiSSID:
-        String,
+      // =================================================
+      // VOLTAGE
+      // =================================================
 
-      ipAddress:
-        String,
+      voltage: {
+        type: Number,
+      },
 
-      rssi:
-        Number,
+      // =================================================
+      // CURRENT
+      // =================================================
 
-      freeHeap:
-        Number,
+      current: {
+        type: Number,
+      },
 
-      uptime:
-        Number,
+      // =================================================
+      // POWER
+      // =================================================
 
-      // ===============================================
-      // ALL SENSOR VALUES
-      // ===============================================
+      power: {
+        type: Number,
+      },
+
+      // =================================================
+      // ENERGY
+      // =================================================
+
+      energy: {
+        type: Number,
+      },
+
+      // =================================================
+      // WIFI SSID
+      // =================================================
+
+      wifiSSID: {
+        type: String,
+        default: "",
+      },
+
+      // =================================================
+      // IP ADDRESS
+      // =================================================
+
+      ipAddress: {
+        type: String,
+        default: "",
+      },
+
+      // =================================================
+      // RSSI
+      // =================================================
+
+      rssi: {
+        type: Number,
+      },
+
+      // =================================================
+      // FREE HEAP
+      // =================================================
+
+      freeHeap: {
+        type: Number,
+      },
+
+      // =================================================
+      // UPTIME
+      // =================================================
+
+      uptime: {
+        type: Number,
+      },
+
+      // =================================================
+      // SENSOR ARRAY
+      // =================================================
 
       sensors: {
         type: [
-          DeviceSensorSchema,
+          DeviceLogSensorSchema,
         ],
+
         default: [],
       },
     },
+
+    // ===================================================
+    // TIMESTAMPS
+    // ===================================================
+
     {
-      timestamps: {
-        createdAt: true,
-        updatedAt: false,
-      },
+      timestamps: true,
     }
   );
 
@@ -149,12 +255,15 @@ const DeviceLogSchema =
 // INDEXES
 // =====================================================
 
+// Fast telemetry lookup by device + time.
 DeviceLogSchema.index({
   deviceId: 1,
   createdAt: -1,
 });
 
+// Fast telemetry lookup by serial + time.
 DeviceLogSchema.index({
+  serialId: 1,
   createdAt: -1,
 });
 
@@ -162,9 +271,11 @@ DeviceLogSchema.index({
 // EXPORT
 // =====================================================
 
-export default (mongoose.models
-  .DeviceLog ||
-  mongoose.model<IDeviceLog>(
-    "DeviceLog",
-    DeviceLogSchema
-  )) as Model<IDeviceLog>;
+const DeviceLog =
+  (mongoose.models.DeviceLog ||
+    mongoose.model<IDeviceLog>(
+      "DeviceLog",
+      DeviceLogSchema
+    )) as Model<IDeviceLog>;
+
+export default DeviceLog;
