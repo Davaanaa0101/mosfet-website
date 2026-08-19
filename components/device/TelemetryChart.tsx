@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 import {
   Card,
   CardContent,
@@ -27,6 +25,7 @@ import {
 export interface TelemetrySeries {
   key: string;
   name: string;
+  color: string;
 }
 
 export interface ChartData {
@@ -38,11 +37,8 @@ export interface ChartData {
 
 interface TelemetryChartProps {
   title: string;
-
   data: ChartData[];
-
   series: TelemetrySeries[];
-
   unit: string;
 }
 
@@ -56,17 +52,13 @@ export default function TelemetryChart({
   series,
   unit,
 }: TelemetryChartProps) {
-  // ===================================================
-  // VALID SERIES
-  // ===================================================
-
-  const validSeries = useMemo(() => {
-    return series.filter(
+  const validSeries =
+    series.filter(
       (item) =>
-        typeof item.key === "string" &&
-        item.key.length > 0
+        item.key &&
+        item.name &&
+        item.color
     );
-  }, [series]);
 
   // ===================================================
   // EMPTY STATE
@@ -85,7 +77,7 @@ export default function TelemetryChart({
         </CardHeader>
 
         <CardContent>
-          <div className="flex h-[320px] items-center justify-center">
+          <div className="flex h-[350px] items-center justify-center">
             <p className="text-sm text-muted-foreground">
               No {title.toLowerCase()} data available.
             </p>
@@ -117,7 +109,7 @@ export default function TelemetryChart({
               data={data}
               margin={{
                 top: 10,
-                right: 20,
+                right: 25,
                 left: 10,
                 bottom: 10,
               }}
@@ -170,6 +162,21 @@ export default function TelemetryChart({
               {/* ===================================== */}
 
               <Tooltip
+                contentStyle={{
+                  borderRadius:
+                    "8px",
+                  border:
+                    "1px solid hsl(var(--border))",
+                  background:
+                    "hsl(var(--background))",
+                }}
+                labelFormatter={(
+                  label
+                ) =>
+                  `Time: ${String(
+                    label
+                  )}`
+                }
                 formatter={(
                   rawValue,
                   dataKey
@@ -211,13 +218,6 @@ export default function TelemetryChart({
                     label,
                   ];
                 }}
-                labelFormatter={(
-                  label
-                ) =>
-                  `Time: ${String(
-                    label
-                  )}`
-                }
               />
 
               {/* ===================================== */}
@@ -226,9 +226,11 @@ export default function TelemetryChart({
 
               <Legend
                 verticalAlign="bottom"
-                height={50}
+                height={55}
                 wrapperStyle={{
                   fontSize: "12px",
+                  paddingTop:
+                    "10px",
                 }}
               />
 
@@ -237,15 +239,20 @@ export default function TelemetryChart({
               {/* ===================================== */}
 
               {validSeries.map(
-                (item, index) => (
+                (item) => (
                   <Line
-                    key={item.key}
+                    key={
+                      item.key
+                    }
                     type="monotone"
                     dataKey={
                       item.key
                     }
                     name={
                       item.name
+                    }
+                    stroke={
+                      item.color
                     }
                     dot={false}
                     strokeWidth={2}
@@ -255,7 +262,9 @@ export default function TelemetryChart({
                     isAnimationActive={
                       false
                     }
-                    connectNulls={false}
+                    connectNulls={
+                      false
+                  }
                   />
                 )
               )}

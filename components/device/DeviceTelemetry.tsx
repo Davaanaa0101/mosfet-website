@@ -121,6 +121,30 @@ type SensorGroup =
   | "energy";
 
 // =====================================================
+// STABLE SENSOR COLORS
+//
+// Color is determined by SLOT.
+// Therefore:
+//
+// Slot 1 -> always same color
+// Slot 2 -> always same color
+// Slot 5 -> always same color
+// Slot 6 -> always same color
+//
+// =====================================================
+
+const SENSOR_COLORS = [
+  "#2563eb", // Slot 1 - Blue
+  "#dc2626", // Slot 2 - Red
+  "#16a34a", // Slot 3 - Green
+  "#9333ea", // Slot 4 - Purple
+  "#ea580c", // Slot 5 - Orange
+  "#0891b2", // Slot 6 - Cyan
+  "#db2777", // Slot 7 - Pink
+  "#65a30d", // Slot 8 - Lime
+];
+
+// =====================================================
 // COMPONENT
 // =====================================================
 
@@ -147,7 +171,7 @@ export default function DeviceTelemetry({
     );
 
   // ===================================================
-  // LOAD CONFIG
+  // LOAD CONFIGURATION
   // ===================================================
 
   const loadConfig =
@@ -271,7 +295,7 @@ export default function DeviceTelemetry({
     ]);
 
   // ===================================================
-  // LOAD + REFRESH
+  // LOAD + AUTO REFRESH
   // ===================================================
 
   useEffect(() => {
@@ -304,15 +328,25 @@ export default function DeviceTelemetry({
     useMemo(() => {
       return (
         config?.sensors ?? []
-      ).filter(
-        (sensor) =>
-          Number.isInteger(
-            sensor.slot
-          ) &&
-          sensor.slot >= 1 &&
-          sensor.slot <= 8 &&
-          sensor.type !== "N/A"
-      );
+      )
+        .filter(
+          (sensor) =>
+            Number.isInteger(
+              sensor.slot
+            ) &&
+            sensor.slot >= 1 &&
+            sensor.slot <= 8
+        )
+        .filter(
+          (sensor) =>
+            sensor.type
+              .toUpperCase() !==
+            "N/A"
+        )
+        .sort(
+          (a, b) =>
+            a.slot - b.slot
+        );
     }, [config]);
 
   // ===================================================
@@ -375,7 +409,7 @@ export default function DeviceTelemetry({
     ]);
 
   // ===================================================
-  // BUILD GROUP CHART
+  // BUILD SENSOR GROUP CHART
   // ===================================================
 
   const buildSensorChart =
@@ -403,9 +437,18 @@ export default function DeviceTelemetry({
           sensors.map(
             (sensor) => ({
               key: `sensor_${sensor.slot}`,
-              name: getSensorName(
-                sensor
-              ),
+
+              name:
+                getSensorName(
+                  sensor
+                ),
+
+              color:
+                SENSOR_COLORS[
+                  (sensor.slot -
+                    1) %
+                    SENSOR_COLORS.length
+                ],
             })
           );
 
@@ -468,7 +511,7 @@ export default function DeviceTelemetry({
     );
 
   // ===================================================
-  // BUILD GROUPS
+  // CHART GROUPS
   // ===================================================
 
   const temperatureChart =
@@ -545,8 +588,6 @@ export default function DeviceTelemetry({
 
   // ===================================================
   // GENERIC SYSTEM TELEMETRY
-  //
-  // These are the top-level values sent by ESP32.
   // ===================================================
 
   const genericChartData =
@@ -615,7 +656,7 @@ export default function DeviceTelemetry({
               </p>
             </div>
 
-            {/* RANGE */}
+            {/* RANGE SELECTOR */}
 
             <div className="flex flex-wrap gap-2">
               {RANGE_OPTIONS.map(
@@ -834,6 +875,8 @@ export default function DeviceTelemetry({
                   {
                     key: "current",
                     name: "Current",
+                    color:
+                      "#2563eb",
                   },
                 ]}
                 unit="A"
@@ -856,6 +899,8 @@ export default function DeviceTelemetry({
                   {
                     key: "voltage",
                     name: "Voltage",
+                    color:
+                      "#16a34a",
                   },
                 ]}
                 unit="V"
@@ -878,6 +923,8 @@ export default function DeviceTelemetry({
                   {
                     key: "power",
                     name: "Power",
+                    color:
+                      "#9333ea",
                   },
                 ]}
                 unit="W"
@@ -900,6 +947,8 @@ export default function DeviceTelemetry({
                   {
                     key: "energy",
                     name: "Energy",
+                    color:
+                      "#ea580c",
                   },
                 ]}
                 unit="Wh"
@@ -947,46 +996,22 @@ function getSensorGroup(
   switch (
     type.toUpperCase()
   ) {
-    // -----------------------------------------------
-    // TEMPERATURE
-    // -----------------------------------------------
-
     case "TEMPERATURE":
     case "DHT_TEMPERATURE":
       return "temperature";
-
-    // -----------------------------------------------
-    // HUMIDITY
-    // -----------------------------------------------
 
     case "HUMIDITY":
     case "DHT_HUMIDITY":
       return "humidity";
 
-    // -----------------------------------------------
-    // CURRENT
-    // -----------------------------------------------
-
     case "CURRENT":
       return "current";
-
-    // -----------------------------------------------
-    // VOLTAGE
-    // -----------------------------------------------
 
     case "VOLTAGE":
       return "voltage";
 
-    // -----------------------------------------------
-    // POWER
-    // -----------------------------------------------
-
     case "POWER":
       return "power";
-
-    // -----------------------------------------------
-    // ENERGY
-    // -----------------------------------------------
 
     case "ENERGY":
       return "energy";
@@ -1036,7 +1061,7 @@ function getDefaultSensorName(
 }
 
 // =====================================================
-// NUMBER
+// NUMBER VALIDATION
 // =====================================================
 
 function validNumber(
@@ -1045,9 +1070,11 @@ function validNumber(
     | null
     | undefined
 ): number | null {
-  return typeof value ===
-    "number" &&
+  return (
+    typeof value ===
+      "number" &&
     Number.isFinite(value)
+  )
     ? value
     : null;
 }
