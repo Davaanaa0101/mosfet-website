@@ -4,8 +4,32 @@ import {
 } from "next/server";
 
 import { connectDB } from "@/lib/mongodb";
-import Alert from "@/models/Alert";
+import Alert, {
+  AlertType,
+} from "@/models/Alert";
 import Device from "@/models/Device";
+
+// =====================================================
+// ALERT TYPES
+// =====================================================
+
+const ALERT_TYPES = [
+  "DEVICE_OFFLINE",
+  "HIGH_TEMPERATURE",
+  "LOW_TEMPERATURE",
+  "HIGH_HUMIDITY",
+  "LOW_HUMIDITY",
+  "HIGH_CURRENT",
+  "LOW_RSSI",
+] as const;
+
+function isAlertType(
+  value: string
+): value is AlertType {
+  return ALERT_TYPES.includes(
+    value as AlertType
+  );
+}
 
 // =====================================================
 // GET ALERTS
@@ -23,20 +47,15 @@ export async function GET(
     const status =
       searchParams.get("status");
 
-    const limitParam =
-      Number(
-        searchParams.get("limit") ||
-          "100"
-      );
+    const limitParam = Number(
+      searchParams.get("limit") ||
+        "100"
+    );
 
     const limit = Math.min(
       Math.max(
-        Number.isFinite(
-          limitParam
-        )
-          ? Math.floor(
-              limitParam
-            )
+        Number.isFinite(limitParam)
+          ? Math.floor(limitParam)
           : 100,
         1
       ),
@@ -157,7 +176,7 @@ export async function POST(
     } = body;
 
     // =================================================
-    // VALIDATION
+    // VALIDATE DEVICE ID
     // =================================================
 
     if (
@@ -168,6 +187,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "deviceId is required",
         },
@@ -177,22 +197,33 @@ export async function POST(
       );
     }
 
+    // =================================================
+    // VALIDATE ALERT TYPE
+    // =================================================
+
     if (
-      !type ||
-      typeof type !==
-        "string"
+      typeof type !== "string" ||
+      !isAlertType(type)
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
-            "Alert type is required",
+            "Invalid alert type",
+
+          allowedTypes:
+            ALERT_TYPES,
         },
         {
           status: 400,
         }
       );
     }
+
+    // =================================================
+    // VALIDATE TITLE
+    // =================================================
 
     if (
       !title ||
@@ -202,6 +233,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Alert title is required",
         },
@@ -211,6 +243,10 @@ export async function POST(
       );
     }
 
+    // =================================================
+    // VALIDATE MESSAGE
+    // =================================================
+
     if (
       !message ||
       typeof message !==
@@ -219,6 +255,7 @@ export async function POST(
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Alert message is required",
         },
@@ -232,10 +269,13 @@ export async function POST(
     // FIND DEVICE
     // =================================================
 
+    const cleanDeviceId =
+      deviceId.trim();
+
     const device =
       await Device.findOne({
         deviceId:
-          deviceId.trim(),
+          cleanDeviceId,
       }).lean();
 
     if (!device) {
@@ -261,7 +301,7 @@ export async function POST(
       unknown
     > = {
       deviceId:
-        deviceId.trim(),
+        cleanDeviceId,
 
       type,
 
@@ -293,13 +333,60 @@ export async function POST(
     }
 
     // =================================================
+    // NORMALIZE SEVERITY
+    // =================================================
+
+    const normalizedSeverity =
+      severity === "critical" ||
+      severity === "info"
+        ? severity
+        : "warning";
+
+    // =================================================
+    // NORMALIZE SENSOR DATA
+    // =================================================
+
+    const normalizedSlot =
+      typeof slot === "number"
+        ? slot
+        : undefined;
+
+    const normalizedSensorType =
+      typeof sensorType ===
+      "string"
+        ? sensorType.trim()
+        : undefined;
+
+    const normalizedSensorName =
+      typeof sensorName ===
+      "string"
+        ? sensorName.trim()
+        : undefined;
+
+    const normalizedValue =
+      typeof value === "number"
+        ? value
+        : null;
+
+    const normalizedThreshold =
+      typeof threshold ===
+      "number"
+        ? threshold
+        : null;
+
+    const normalizedUnit =
+      typeof unit === "string"
+        ? unit.trim()
+        : "";
+
+    // =================================================
     // CREATE ALERT
     // =================================================
 
     const alert =
       await Alert.create({
         deviceId:
-          deviceId.trim(),
+          cleanDeviceId,
 
         deviceName:
           device.name ||
@@ -314,53 +401,35 @@ export async function POST(
           message.trim(),
 
         severity:
-          severity ===
-            "critical" ||
-          severity === "info"
-            ? severity
-            : "warning",
+          normalizedSeverity,
 
         slot:
-          typeof slot ===
-          "number"
-            ? slot
-            : undefined,
+          normalizedSlot,
 
         sensorType:
-          typeof sensorType ===
-          "string"
-            ? sensorType
-            : undefined,
+          normalizedSensorType,
 
         sensorName:
-          typeof sensorName ===
-          "string"
-            ? sensorName
-            : undefined,
+          normalizedSensorName,
 
         value:
-          typeof value ===
-          "number"
-            ? value
-            : null,
+          normalizedValue,
 
         threshold:
-          typeof threshold ===
-          "number"
-            ? threshold
-            : null,
+          normalizedThreshold,
 
         unit:
-          typeof unit ===
-          "string"
-            ? unit
-            : "",
+          normalizedUnit,
 
         status: "active",
 
         triggeredAt:
           new Date(),
       });
+
+    // =================================================
+    // RESPONSE
+    // =================================================
 
     return NextResponse.json(
       {
