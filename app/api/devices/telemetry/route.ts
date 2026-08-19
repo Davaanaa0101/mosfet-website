@@ -57,7 +57,7 @@ function isAlertType(
 }
 
 // =====================================================
-// API KEY COMPARISON
+// SAFE API KEY COMPARISON
 // =====================================================
 
 function safeEqual(
@@ -149,13 +149,36 @@ export async function POST(
     }
 
     // =================================================
-    // READ BODY
+    // READ JSON BODY
     // =================================================
 
-    const body =
-      await req.json();
+    let body: Record<
+      string,
+      unknown
+    >;
+
+    try {
+      body =
+        await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid JSON body",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
+    // EXTRACT DATA
+    // =================================================
 
     const {
+      serialId,
       deviceId,
       name,
       type,
@@ -164,18 +187,15 @@ export async function POST(
       firmware,
       ipAddress,
       wifiSSID,
-
       temperature,
       humidity,
       voltage,
       current,
       power,
       energy,
-
       rssi,
       freeHeap,
       uptime,
-
       sensors,
     } = body;
 
@@ -219,6 +239,45 @@ export async function POST(
     }
 
     // =================================================
+    // VALIDATE SERIAL ID
+    // =================================================
+
+    if (
+      !serialId ||
+      typeof serialId !==
+        "string"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "serialId is required",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const normalizedSerialId =
+      serialId.trim();
+
+    if (
+      !normalizedSerialId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "serialId cannot be empty",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // =================================================
     // DATABASE
     // =================================================
 
@@ -226,12 +285,19 @@ export async function POST(
 
     // =================================================
     // FIND DEVICE
+    //
+    // IMPORTANT:
+    //
+    // Both deviceId AND serialId must match.
     // =================================================
 
     const device =
       await Device.findOne({
         deviceId:
           normalizedDeviceId,
+
+        serialId:
+          normalizedSerialId,
       });
 
     if (!device) {
@@ -266,6 +332,26 @@ export async function POST(
         },
         {
           status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DEVICE MUST BE REGISTERED
+    // =================================================
+
+    if (
+      !device.userId ||
+      !device.registeredAt
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device is not registered",
+        },
+        {
+          status: 403,
         }
       );
     }
@@ -365,8 +451,7 @@ export async function POST(
       (typeof deviceTypes)[number];
 
     const normalizedType: DeviceType =
-      typeof type ===
-        "string" &&
+      typeof type === "string" &&
       deviceTypes.includes(
         type
           .trim()
@@ -378,19 +463,7 @@ export async function POST(
         : "esp32";
 
     // =================================================
-    // UPDATE DEVICE
-    //
-    // New status system:
-    //
-    // NOT_REGISTERED
-    // REGISTERED
-    // RUNNING
-    // WARNING
-    // ERROR
-    // OFFLINE
-    //
-    // A successful telemetry request means
-    // the device is currently RUNNING.
+    // UPDATE BASIC DEVICE INFORMATION
     // =================================================
 
     device.status =
@@ -400,8 +473,7 @@ export async function POST(
       new Date();
 
     if (
-      typeof name ===
-        "string" &&
+      typeof name === "string" &&
       name.trim()
     ) {
       device.name =
@@ -447,14 +519,11 @@ export async function POST(
         ipAddress.trim();
     }
 
+    // =================================================
+    // SAVE DEVICE
+    // =================================================
+
     await device.save();
-
-    // =================================================
-    // GUARANTEED DEVICE REFERENCE
-    // =================================================
-
-    const currentDevice =
-      device;
 
     // =================================================
     // NORMALIZE SENSOR ARRAY
@@ -466,25 +535,49 @@ export async function POST(
             .filter(
               (sensor) =>
                 sensor &&
-                typeof sensor.slot ===
+                typeof sensor ===
+                  "object" &&
+                typeof (
+                  sensor as Record<
+                    string,
+                    unknown
+                  >
+                ).slot ===
                   "number" &&
-                typeof sensor.type ===
+                typeof (
+                  sensor as Record<
+                    string,
+                    unknown
+                  >
+                ).type ===
                   "string"
             )
             .map(
-              (sensor) => ({
-                slot:
-                  sensor.slot,
+              (sensor) => {
+                const item =
+                  sensor as Record<
+                    string,
+                    unknown
+                  >;
 
-                type:
-                  sensor.type,
+                return {
+                  slot:
+                    Number(
+                      item.slot
+                    ),
 
-                value:
-                  typeof sensor.value ===
-                  "number"
-                    ? sensor.value
-                    : null,
-              })
+                  type:
+                    String(
+                      item.type
+                    ),
+
+                  value:
+                    typeof item.value ===
+                    "number"
+                      ? item.value
+                      : null,
+                };
+              }
             )
         : [];
 
@@ -496,6 +589,9 @@ export async function POST(
       await DeviceLog.create({
         deviceId:
           normalizedDeviceId,
+
+        serialId:
+          normalizedSerialId,
 
         temperature:
           typeof temperature ===
@@ -573,11 +669,9 @@ export async function POST(
 
     const configuredSensors: SensorConfig[] =
       Array.isArray(
-        (currentDevice as any)
-          .sensors
+        device.sensors
       )
-        ? (currentDevice as any)
-            .sensors
+        ? device.sensors
         : [];
 
     // =================================================
@@ -668,8 +762,7 @@ export async function POST(
           query
         );
 
-      // Do not create duplicate
-      // active alerts every telemetry cycle.
+      // Do not create duplicate alerts
       if (existing) {
         return;
       }
@@ -679,7 +772,7 @@ export async function POST(
           normalizedDeviceId,
 
         deviceName:
-          currentDevice.name ||
+          device.name ||
           normalizedDeviceId,
 
         type:
@@ -716,8 +809,7 @@ export async function POST(
             : null,
 
         unit:
-          options.unit ||
-          "",
+          options.unit || "",
 
         status:
           "active",
@@ -784,13 +876,12 @@ export async function POST(
     }
 
     // =================================================
-    // CHECK ALL SENSOR VALUES
+    // CHECK SENSOR VALUES
     // =================================================
 
     for (
       const sensor of normalizedSensors
     ) {
-      // Ignore missing values.
       if (
         sensor.value ===
           null ||
@@ -1142,14 +1233,11 @@ export async function POST(
     }
 
     // =================================================
-    // UPDATE DEVICE STATUS BASED ON ACTIVE ALERTS
+    // UPDATE DEVICE STATUS
     //
-    // Successful telemetry starts as RUNNING.
-    //
-    // Critical active alert  -> ERROR
-    // Warning active alert   -> WARNING
-    // No active alert        -> RUNNING
-    //
+    // Critical -> ERROR
+    // Warning  -> WARNING
+    // None     -> RUNNING
     // =================================================
 
     const activeAlerts =
@@ -1177,20 +1265,22 @@ export async function POST(
           "warning"
       );
 
-    if (hasCriticalAlert) {
-      currentDevice.status =
+    if (
+      hasCriticalAlert
+    ) {
+      device.status =
         "ERROR";
     } else if (
       hasWarningAlert
     ) {
-      currentDevice.status =
+      device.status =
         "WARNING";
     } else {
-      currentDevice.status =
+      device.status =
         "RUNNING";
     }
 
-    await currentDevice.save();
+    await device.save();
 
     // =================================================
     // RESPONSE
@@ -1205,8 +1295,11 @@ export async function POST(
       deviceId:
         normalizedDeviceId,
 
+      serialId:
+        normalizedSerialId,
+
       status:
-        currentDevice.status,
+        device.status,
 
       sensorCount:
         normalizedSensors.length,

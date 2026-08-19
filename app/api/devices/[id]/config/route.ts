@@ -3,6 +3,8 @@ import {
   NextResponse,
 } from "next/server";
 
+import crypto from "crypto";
+
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
@@ -97,6 +99,37 @@ function getBearerToken(
 }
 
 // =====================================================
+// SAFE API KEY COMPARISON
+// =====================================================
+
+function safeCompare(
+  a: string,
+  b: string
+): boolean {
+  if (!a || !b) {
+    return false;
+  }
+
+  const aBuffer =
+    Buffer.from(a);
+
+  const bBuffer =
+    Buffer.from(b);
+
+  if (
+    aBuffer.length !==
+    bBuffer.length
+  ) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(
+    aBuffer,
+    bBuffer
+  );
+}
+
+// =====================================================
 // FIND DEVICE
 //
 // Supports:
@@ -124,57 +157,10 @@ async function findDevice(
     device =
       await Device.findById(id);
   } catch {
-    // Not a valid MongoDB ObjectId.
+    // Invalid MongoDB ObjectId.
   }
 
   return device;
-}
-
-// =====================================================
-// CHECK DEVICE API KEY
-// =====================================================
-
-async function authenticateDevice(
-  request: NextRequest,
-  device: {
-    apiKey?: string;
-    deviceId: string;
-    serialId: string;
-    userId?: string;
-  }
-): Promise<boolean> {
-  const apiKey =
-    getBearerToken(request);
-
-  if (!apiKey) {
-    return false;
-  }
-
-  if (
-    !device.apiKey ||
-    !apiKey
-  ) {
-    return false;
-  }
-
-  return apiKey ===
-    device.apiKey;
-}
-
-// =====================================================
-// CHECK USER SESSION
-// =====================================================
-
-async function authenticateUser(
-  request: NextRequest
-) {
-  const session =
-    await auth.api.getSession({
-      headers:
-        request.headers,
-    });
-
-  return session;
 }
 
 // =====================================================
@@ -185,6 +171,9 @@ async function authenticateUser(
 // Authorization:
 // Bearer DEVICE_API_KEY
 //
+// Dashboard:
+//
+// Better Auth session cookie
 // =====================================================
 
 export async function GET(
@@ -203,6 +192,10 @@ export async function GET(
     // =================================================
 
     await connectDB();
+
+    // =================================================
+    // PARAMETER
+    // =================================================
 
     const { id } =
       await params;
@@ -241,56 +234,106 @@ export async function GET(
     }
 
     // =================================================
-    // DEVICE API KEY AUTH
+    // CHECK FOR DEVICE API KEY
     // =================================================
 
-    const authenticated =
-      await authenticateDevice(
-        request,
-        {
-          apiKey:
-            device.apiKey,
+    const bearerToken =
+      getBearerToken(request);
 
+    // =================================================
+    // ESP32 AUTHENTICATION
+    // =================================================
+
+    if (bearerToken) {
+      if (
+        !device.apiKey ||
+        !safeCompare(
+          bearerToken,
+          device.apiKey
+        )
+      ) {
+        console.warn(
+          "[device-config] Invalid device API key:",
+          {
+            deviceId:
+              device.deviceId,
+
+            serialId:
+              device.serialId,
+          }
+        );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Unauthorized",
+          },
+          {
+            status: 401,
+          }
+        );
+      }
+
+      console.log(
+        "[device-config] ESP32 authenticated:",
+        device.deviceId
+      );
+    }
+
+    // =================================================
+    // DASHBOARD AUTHENTICATION
+    // =================================================
+
+    else {
+      const session =
+        await auth.api.getSession({
+          headers:
+            request.headers,
+        });
+
+      if (!session?.user) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Unauthorized",
+          },
+          {
+            status: 401,
+          }
+        );
+      }
+
+      // =================================================
+      // OWNERSHIP CHECK
+      // =================================================
+
+      if (
+        !device.userId ||
+        device.userId !==
+          session.user.id
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Device not found",
+          },
+          {
+            status: 404,
+          }
+        );
+      }
+
+      console.log(
+        "[device-config] Dashboard authenticated:",
+        {
           deviceId:
             device.deviceId,
-
-          serialId:
-            device.serialId,
 
           userId:
-            device.userId,
-        }
-      );
-
-    if (!authenticated) {
-      console.warn(
-        "[device-config] Unauthorized device request:",
-        {
-          deviceId:
-            device.deviceId,
-
-          serialId:
-            device.serialId,
-
-          ip:
-            request.headers.get(
-              "x-forwarded-for"
-            ) ||
-            request.headers.get(
-              "x-real-ip"
-            ) ||
-            "unknown",
-        }
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Unauthorized",
-        },
-        {
-          status: 401,
+            session.user.id,
         }
       );
     }
@@ -322,8 +365,7 @@ export async function GET(
     const sendInterval =
       typeof device.sendInterval ===
         "number" &&
-      device.sendInterval >=
-        1000
+      device.sendInterval >= 1000
         ? device.sendInterval
         : DEFAULT_CONFIG.sendInterval;
 
@@ -426,9 +468,10 @@ export async function PUT(
     // =================================================
 
     const session =
-      await authenticateUser(
-        request
-      );
+      await auth.api.getSession({
+        headers:
+          request.headers,
+      });
 
     if (!session?.user) {
       return NextResponse.json(
@@ -448,6 +491,10 @@ export async function PUT(
     // =================================================
 
     await connectDB();
+
+    // =================================================
+    // PARAMETER
+    // =================================================
 
     const { id } =
       await params;
@@ -541,31 +588,6 @@ export async function PUT(
       body.sensors;
 
     // =================================================
-    // LOG
-    // =================================================
-
-    console.log(
-      "[device-config] PUT request:",
-      {
-        id,
-
-        userId:
-          session.user.id,
-
-        deviceName,
-
-        sendInterval,
-
-        sensorCount:
-          Array.isArray(
-            sensors
-          )
-            ? sensors.length
-            : 0,
-      }
-    );
-
-    // =================================================
     // VALIDATE DEVICE NAME
     // =================================================
 
@@ -616,8 +638,7 @@ export async function PUT(
       !Number.isFinite(
         normalizedInterval
       ) ||
-      normalizedInterval <
-        1000
+      normalizedInterval < 1000
     ) {
       return NextResponse.json(
         {
@@ -772,6 +793,7 @@ export async function PUT(
         {
           _id:
             device._id,
+
           userId:
             session.user.id,
         },
@@ -793,10 +815,6 @@ export async function PUT(
         }
       ).lean();
 
-    // =================================================
-    // VERIFY
-    // =================================================
-
     if (!updatedDevice) {
       return NextResponse.json(
         {
@@ -809,33 +827,6 @@ export async function PUT(
         }
       );
     }
-
-    // =================================================
-    // LOG
-    // =================================================
-
-    console.log(
-      "[device-config] DATABASE UPDATED:",
-      {
-        deviceId:
-          updatedDevice.deviceId,
-
-        serialId:
-          updatedDevice.serialId,
-
-        userId:
-          updatedDevice.userId,
-
-        name:
-          updatedDevice.name,
-
-        sendInterval:
-          updatedDevice.sendInterval,
-
-        sensors:
-          updatedDevice.sensors,
-      }
-    );
 
     // =================================================
     // RESPONSE
