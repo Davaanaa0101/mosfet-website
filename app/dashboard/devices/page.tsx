@@ -1,4 +1,4 @@
-import DeviceTable from "@/components/dashboard/DeviceTable";
+import DeviceList from "@/components/devices/DeviceList";
 
 export default function DevicesPage() {
   return (
@@ -8,12 +8,12 @@ export default function DevicesPage() {
           Devices
         </h1>
 
-        <p className="text-muted-foreground">
-          Monitor and manage connected devices.
+        <p className="mt-1 text-muted-foreground">
+          Manage and monitor all connected devices.
         </p>
       </div>
 
-      <DeviceTable />
+      <DeviceList />
     </div>
   );
 }
