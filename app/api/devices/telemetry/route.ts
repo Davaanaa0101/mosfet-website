@@ -226,9 +226,6 @@ export async function POST(
 
     // =================================================
     // FIND DEVICE
-    //
-    // IMPORTANT:
-    // Devices must already exist and have an API key.
     // =================================================
 
     const device =
@@ -275,9 +272,6 @@ export async function POST(
 
     // =================================================
     // LOAD ALERT SETTINGS
-    //
-    // Settings are stored in MongoDB.
-    // If no settings exist yet, use safe defaults.
     // =================================================
 
     const alertSettings =
@@ -385,10 +379,22 @@ export async function POST(
 
     // =================================================
     // UPDATE DEVICE
+    //
+    // New status system:
+    //
+    // NOT_REGISTERED
+    // REGISTERED
+    // RUNNING
+    // WARNING
+    // ERROR
+    // OFFLINE
+    //
+    // A successful telemetry request means
+    // the device is currently RUNNING.
     // =================================================
 
     device.status =
-      "online";
+      "RUNNING";
 
     device.lastSeen =
       new Date();
@@ -649,7 +655,6 @@ export async function POST(
           "active",
       };
 
-      // Sensor alerts are unique per slot.
       if (
         typeof options.slot ===
         "number"
@@ -664,7 +669,7 @@ export async function POST(
         );
 
       // Do not create duplicate
-      // active alerts every 10 seconds.
+      // active alerts every telemetry cycle.
       if (existing) {
         return;
       }
@@ -1137,18 +1142,71 @@ export async function POST(
     }
 
     // =================================================
+    // UPDATE DEVICE STATUS BASED ON ACTIVE ALERTS
+    //
+    // Successful telemetry starts as RUNNING.
+    //
+    // Critical active alert  -> ERROR
+    // Warning active alert   -> WARNING
+    // No active alert        -> RUNNING
+    //
+    // =================================================
+
+    const activeAlerts =
+      await Alert.find({
+        deviceId:
+          normalizedDeviceId,
+
+        status:
+          "active",
+      })
+        .select("severity")
+        .lean();
+
+    const hasCriticalAlert =
+      activeAlerts.some(
+        (alert) =>
+          alert.severity ===
+          "critical"
+      );
+
+    const hasWarningAlert =
+      activeAlerts.some(
+        (alert) =>
+          alert.severity ===
+          "warning"
+      );
+
+    if (hasCriticalAlert) {
+      currentDevice.status =
+        "ERROR";
+    } else if (
+      hasWarningAlert
+    ) {
+      currentDevice.status =
+        "WARNING";
+    } else {
+      currentDevice.status =
+        "RUNNING";
+    }
+
+    await currentDevice.save();
+
+    // =================================================
     // RESPONSE
     // =================================================
 
     return NextResponse.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Telemetry received",
 
       deviceId:
         normalizedDeviceId,
+
+      status:
+        currentDevice.status,
 
       sensorCount:
         normalizedSensors.length,
@@ -1169,13 +1227,12 @@ export async function POST(
 
     return NextResponse.json(
       {
-        success:
-          false,
+        success: false,
 
         error:
           error instanceof Error
-          ? error.message
-          : String(error),
+            ? error.message
+            : String(error),
       },
       {
         status: 500,
