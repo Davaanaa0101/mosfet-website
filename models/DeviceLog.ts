@@ -4,33 +4,58 @@ import mongoose, {
   Document,
 } from "mongoose";
 
+// =====================================================
+// SENSOR VALUE
+// =====================================================
+
 export interface IDeviceSensor {
   slot: number;
+
   type: string;
+
   value?: number | null;
 }
 
-export interface IDeviceLog extends Document {
+// =====================================================
+// DEVICE LOG
+// =====================================================
+
+export interface IDeviceLog
+  extends Document {
   deviceId: string;
 
   temperature?: number;
+
   humidity?: number;
+
   voltage?: number;
+
   current?: number;
+
   power?: number;
+
   energy?: number;
 
   wifiSSID?: string;
+
   ipAddress?: string;
 
   rssi?: number;
+
   freeHeap?: number;
+
   uptime?: number;
 
+  // IMPORTANT:
+  // Store ALL configured sensor readings.
   sensors?: IDeviceSensor[];
 
   createdAt: Date;
 }
+
+// =====================================================
+// SENSOR SCHEMA
+// =====================================================
 
 const DeviceSensorSchema =
   new Schema<IDeviceSensor>(
@@ -55,6 +80,10 @@ const DeviceSensorSchema =
     }
   );
 
+// =====================================================
+// DEVICE LOG SCHEMA
+// =====================================================
+
 const DeviceLogSchema =
   new Schema<IDeviceLog>(
     {
@@ -64,30 +93,47 @@ const DeviceLogSchema =
         index: true,
       },
 
-      temperature: Number,
+      temperature:
+        Number,
 
-      humidity: Number,
+      humidity:
+        Number,
 
-      voltage: Number,
+      voltage:
+        Number,
 
-      current: Number,
+      current:
+        Number,
 
-      power: Number,
+      power:
+        Number,
 
-      energy: Number,
+      energy:
+        Number,
 
-      wifiSSID: String,
+      wifiSSID:
+        String,
 
-      ipAddress: String,
+      ipAddress:
+        String,
 
-      rssi: Number,
+      rssi:
+        Number,
 
-      freeHeap: Number,
+      freeHeap:
+        Number,
 
-      uptime: Number,
+      uptime:
+        Number,
+
+      // ===============================================
+      // ALL SENSOR VALUES
+      // ===============================================
 
       sensors: {
-        type: [DeviceSensorSchema],
+        type: [
+          DeviceSensorSchema,
+        ],
         default: [],
       },
     },
@@ -99,7 +145,25 @@ const DeviceLogSchema =
     }
   );
 
-export default (mongoose.models.DeviceLog ||
+// =====================================================
+// INDEXES
+// =====================================================
+
+DeviceLogSchema.index({
+  deviceId: 1,
+  createdAt: -1,
+});
+
+DeviceLogSchema.index({
+  createdAt: -1,
+});
+
+// =====================================================
+// EXPORT
+// =====================================================
+
+export default (mongoose.models
+  .DeviceLog ||
   mongoose.model<IDeviceLog>(
     "DeviceLog",
     DeviceLogSchema

@@ -20,37 +20,53 @@ import TelemetryChart from "@/components/device/TelemetryChart";
 // TYPES
 // =====================================================
 
+interface SensorConfig {
+  slot: number;
+  type: string;
+  name?: string;
+  unit?: string;
+}
+
+interface DeviceConfig {
+  success?: boolean;
+  deviceId: string;
+  deviceName: string;
+  sendInterval: number;
+  sensors: SensorConfig[];
+}
+
+interface SensorValue {
+  slot: number;
+  type: string;
+  value: number | null;
+}
+
 interface TelemetryData {
   createdAt: string;
 
   temperature?: number | null;
-
   humidity?: number | null;
-
   voltage?: number | null;
-
   current?: number | null;
-
   power?: number | null;
-
   energy?: number | null;
+
+  sensors?: SensorValue[];
 }
 
 interface TelemetryResponse {
   success: boolean;
-
   deviceId: string;
-
   deviceName?: string;
-
   range?: string;
-
   count?: number;
-
   data: TelemetryData[];
-
   error?: string;
 }
+
+// =====================================================
+// RANGE
+// =====================================================
 
 type Range =
   | "1h"
@@ -58,18 +74,6 @@ type Range =
   | "24h"
   | "7d"
   | "30d";
-
-// =====================================================
-// PROPS
-// =====================================================
-
-interface Props {
-  deviceId: string;
-}
-
-// =====================================================
-// RANGE OPTIONS
-// =====================================================
 
 const RANGE_OPTIONS: {
   value: Range;
@@ -98,7 +102,25 @@ const RANGE_OPTIONS: {
 ];
 
 // =====================================================
-// COMPONENT
+// PROPS
+// =====================================================
+
+interface Props {
+  deviceId: string;
+}
+
+// =====================================================
+// SENSOR CHART DATA
+// =====================================================
+
+interface SensorChartData {
+  createdAt: string;
+  time: string;
+  value: number | null;
+}
+
+// =====================================================
+// MAIN COMPONENT
 // =====================================================
 
 export default function DeviceTelemetry({
@@ -110,11 +132,75 @@ export default function DeviceTelemetry({
   const [data, setData] =
     useState<TelemetryData[]>([]);
 
+  const [config, setConfig] =
+    useState<DeviceConfig | null>(null);
+
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState<string | null>(null);
+
+  // ===================================================
+  // LOAD CONFIGURATION
+  // ===================================================
+
+  const loadConfig =
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              `/api/devices/${encodeURIComponent(
+                deviceId
+              )}/config`,
+              {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
+
+          const result =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              result.error ||
+                "Failed to load device configuration"
+            );
+          }
+
+          if (
+            result.success === false
+          ) {
+            throw new Error(
+              result.error ||
+                "Failed to load device configuration"
+            );
+          }
+
+          setConfig(
+            result as DeviceConfig
+          );
+        } catch (err) {
+          console.error(
+            "[DeviceTelemetry] Config error:",
+            err
+          );
+
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load device configuration"
+          );
+        }
+      },
+      [deviceId]
+    );
 
   // ===================================================
   // LOAD TELEMETRY
@@ -165,7 +251,7 @@ export default function DeviceTelemetry({
           setError(null);
         } catch (err) {
           console.error(
-            "[DeviceTelemetry]",
+            "[DeviceTelemetry] Telemetry error:",
             err
           );
 
@@ -182,19 +268,20 @@ export default function DeviceTelemetry({
     );
 
   // ===================================================
-  // LOAD + AUTO REFRESH
+  // INITIAL LOAD
   // ===================================================
 
   useEffect(() => {
     setLoading(true);
 
+    loadConfig();
     loadTelemetry();
 
     const interval =
-      setInterval(
-        loadTelemetry,
-        10000
-      );
+      setInterval(() => {
+        loadConfig();
+        loadTelemetry();
+      }, 10000);
 
     return () => {
       clearInterval(
@@ -202,23 +289,108 @@ export default function DeviceTelemetry({
       );
     };
   }, [
+    loadConfig,
     loadTelemetry,
   ]);
 
   // ===================================================
-  // CHART DATA
+  // CONFIGURED SENSORS
   // ===================================================
 
-  const chartData =
+  const configuredSensors =
+    useMemo(() => {
+      return (
+        config?.sensors ?? []
+      ).filter(
+        (sensor) =>
+          Number.isInteger(
+            sensor.slot
+          ) &&
+          sensor.slot >= 1 &&
+          sensor.slot <= 8
+      );
+    }, [config]);
+
+  // ===================================================
+  // SENSOR CHARTS
+  // ===================================================
+
+  const sensorCharts =
+    useMemo(() => {
+      return configuredSensors
+        .map((sensor) => {
+          const chartData: SensorChartData[] =
+            data
+              .map((record) => {
+                const reading =
+                  record.sensors?.find(
+                    (item) =>
+                      item.slot ===
+                      sensor.slot
+                  );
+
+                const value =
+                  reading?.value;
+
+                return {
+                  createdAt:
+                    record.createdAt,
+
+                  time:
+                    formatChartTime(
+                      record.createdAt,
+                      range
+                    ),
+
+                  value:
+                    typeof value ===
+                      "number" &&
+                    Number.isFinite(
+                      value
+                    )
+                      ? value
+                      : null,
+                };
+              })
+              .filter(
+                (item) =>
+                  item.value !== null
+              );
+
+          return {
+            sensor,
+            chartData,
+          };
+        })
+        .filter(
+          ({ chartData }) =>
+            chartData.length > 0
+        );
+    }, [
+      configuredSensors,
+      data,
+      range,
+    ]);
+
+  // ===================================================
+  // GENERIC TELEMETRY DATA
+  //
+  // These are kept for electrical/system
+  // telemetry that is not represented by a
+  // configured sensor slot.
+  // ===================================================
+
+  const genericChartData =
     useMemo(() => {
       return data.map(
         (item) => ({
           ...item,
 
-          time: formatChartTime(
-            item.createdAt,
-            range
-          ),
+          time:
+            formatChartTime(
+              item.createdAt,
+              range
+            ),
         })
       );
     }, [data, range]);
@@ -242,11 +414,13 @@ export default function DeviceTelemetry({
               </CardTitle>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Device sensor history
+                {config?.deviceName ||
+                  "Device"}{" "}
+                sensor history
               </p>
             </div>
 
-            {/* RANGE SELECTOR */}
+            {/* RANGE */}
 
             <div className="flex flex-wrap gap-2">
               {RANGE_OPTIONS.map(
@@ -311,71 +485,213 @@ export default function DeviceTelemetry({
 
           {data.length >
             0 && (
-            <p className="text-xs text-muted-foreground">
-              {data.length} telemetry
-              records ·{" "}
-              {range.toUpperCase()}
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                {data.length} telemetry
+                records ·{" "}
+                {range.toUpperCase()}
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                {
+                  sensorCharts.length
+                }{" "}
+                active sensors
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
 
       {/* =========================================== */}
-      {/* TEMPERATURE */}
+      {/* CONFIGURED SENSOR HISTORY */}
       {/* =========================================== */}
 
-      <TelemetryChart
-        title="Temperature"
-        data={chartData}
-        dataKey="temperature"
-        unit="°C"
-      />
+      {sensorCharts.length >
+        0 && (
+        <div className="space-y-6">
+          {sensorCharts.map(
+            ({
+              sensor,
+              chartData,
+            }) => {
+              const title =
+                sensor.name ||
+                getDefaultSensorName(
+                  sensor
+                );
+
+              const unit =
+                sensor.unit ||
+                getDefaultSensorUnit(
+                  sensor
+                );
+
+              return (
+                <TelemetryChart
+                  key={
+                    `sensor-${sensor.slot}`
+                  }
+                  title={`${title} — Slot ${sensor.slot}`}
+                  data={chartData}
+                  dataKey="value"
+                  unit={unit}
+                />
+              );
+            }
+          )}
+        </div>
+      )}
 
       {/* =========================================== */}
-      {/* HUMIDITY */}
+      {/* NO SENSOR HISTORY */}
       {/* =========================================== */}
 
-      <TelemetryChart
-        title="Humidity"
-        data={chartData}
-        dataKey="humidity"
-        unit="%"
-      />
+      {!loading &&
+        !error &&
+        data.length > 0 &&
+        sensorCharts.length ===
+          0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                Sensor History
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                No configured sensor has
+                numeric telemetry data in
+                this period.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
       {/* =========================================== */}
-      {/* CURRENT */}
+      {/* ELECTRICAL TELEMETRY */}
       {/* =========================================== */}
 
-      <TelemetryChart
-        title="Current"
-        data={chartData}
-        dataKey="current"
-        unit="A"
-      />
+      {data.length > 0 && (
+        <>
+          <div>
+            <h2 className="mb-4 text-lg font-semibold">
+              System Telemetry
+            </h2>
 
-      {/* =========================================== */}
-      {/* VOLTAGE */}
-      {/* =========================================== */}
+            <div className="space-y-6">
+              <TelemetryChart
+                title="Current"
+                data={
+                  genericChartData
+                }
+                dataKey="current"
+                unit="A"
+              />
 
-      <TelemetryChart
-        title="Voltage"
-        data={chartData}
-        dataKey="voltage"
-        unit="V"
-      />
+              <TelemetryChart
+                title="Voltage"
+                data={
+                  genericChartData
+                }
+                dataKey="voltage"
+                unit="V"
+              />
 
-      {/* =========================================== */}
-      {/* POWER */}
-      {/* =========================================== */}
+              <TelemetryChart
+                title="Power"
+                data={
+                  genericChartData
+                }
+                dataKey="power"
+                unit="W"
+              />
 
-      <TelemetryChart
-        title="Power"
-        data={chartData}
-        dataKey="power"
-        unit="W"
-      />
+              <TelemetryChart
+                title="Energy"
+                data={
+                  genericChartData
+                }
+                dataKey="energy"
+                unit="Wh"
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
+}
+
+// =====================================================
+// DEFAULT SENSOR NAME
+// =====================================================
+
+function getDefaultSensorName(
+  sensor: SensorConfig
+): string {
+  switch (
+    sensor.type
+  ) {
+    case "TEMPERATURE":
+      return `DS18B20 #${sensor.slot}`;
+
+    case "DHT_TEMPERATURE":
+      return "AM2302 Temperature";
+
+    case "DHT_HUMIDITY":
+      return "AM2302 Humidity";
+
+    case "CONTACT":
+      return "Contact";
+
+    case "CURRENT":
+      return "Current";
+
+    case "VOLTAGE":
+      return "Voltage";
+
+    case "POWER":
+      return "Power";
+
+    default:
+      return `Sensor #${sensor.slot}`;
+  }
+}
+
+// =====================================================
+// DEFAULT SENSOR UNIT
+// =====================================================
+
+function getDefaultSensorUnit(
+  sensor: SensorConfig
+): string {
+  switch (
+    sensor.type
+  ) {
+    case "TEMPERATURE":
+    case "DHT_TEMPERATURE":
+      return "°C";
+
+    case "DHT_HUMIDITY":
+      return "%";
+
+    case "CURRENT":
+      return "A";
+
+    case "VOLTAGE":
+      return "V";
+
+    case "POWER":
+      return "W";
+
+    case "ENERGY":
+      return "Wh";
+
+    default:
+      return "";
+  }
 }
 
 // =====================================================
@@ -399,18 +715,7 @@ function formatChartTime(
 
   if (
     range === "1h" ||
-    range === "6h"
-  ) {
-    return date.toLocaleTimeString(
-      [],
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-      }
-    );
-  }
-
-  if (
+    range === "6h" ||
     range === "24h"
   ) {
     return date.toLocaleTimeString(
