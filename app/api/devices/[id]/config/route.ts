@@ -4,7 +4,6 @@ import {
 } from "next/server";
 
 import { auth } from "@/lib/auth";
-
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 
@@ -68,7 +67,124 @@ const DEFAULT_CONFIG = {
 };
 
 // =====================================================
+// HELPERS
+// =====================================================
+
+function getBearerToken(
+  request: NextRequest
+): string | null {
+  const authorization =
+    request.headers.get(
+      "authorization"
+    );
+
+  if (!authorization) {
+    return null;
+  }
+
+  const [scheme, token] =
+    authorization.split(" ");
+
+  if (
+    scheme?.toLowerCase() !==
+      "bearer" ||
+    !token
+  ) {
+    return null;
+  }
+
+  return token.trim() || null;
+}
+
+// =====================================================
+// FIND DEVICE
+//
+// Supports:
+//
+// /api/devices/esp32_1/config
+//
+// and:
+//
+// /api/devices/<mongodb-object-id>/config
+// =====================================================
+
+async function findDevice(
+  id: string
+) {
+  let device =
+    await Device.findOne({
+      deviceId: id,
+    });
+
+  if (device) {
+    return device;
+  }
+
+  try {
+    device =
+      await Device.findById(id);
+  } catch {
+    // Not a valid MongoDB ObjectId.
+  }
+
+  return device;
+}
+
+// =====================================================
+// CHECK DEVICE API KEY
+// =====================================================
+
+async function authenticateDevice(
+  request: NextRequest,
+  device: {
+    apiKey?: string;
+    deviceId: string;
+    serialId: string;
+    userId?: string;
+  }
+): Promise<boolean> {
+  const apiKey =
+    getBearerToken(request);
+
+  if (!apiKey) {
+    return false;
+  }
+
+  if (
+    !device.apiKey ||
+    !apiKey
+  ) {
+    return false;
+  }
+
+  return apiKey ===
+    device.apiKey;
+}
+
+// =====================================================
+// CHECK USER SESSION
+// =====================================================
+
+async function authenticateUser(
+  request: NextRequest
+) {
+  const session =
+    await auth.api.getSession({
+      headers:
+        request.headers,
+    });
+
+  return session;
+}
+
+// =====================================================
 // GET CONFIGURATION
+//
+// ESP32:
+//
+// Authorization:
+// Bearer DEVICE_API_KEY
+//
 // =====================================================
 
 export async function GET(
@@ -82,27 +198,6 @@ export async function GET(
   }
 ) {
   try {
-    // =================================================
-    // AUTHENTICATION
-    // =================================================
-
-    const session =
-      await auth.api.getSession({
-        headers: request.headers,
-      });
-
-    if (!session?.user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-        },
-        {
-          status: 401,
-        }
-      );
-    }
-
     // =================================================
     // DATABASE
     // =================================================
@@ -126,47 +221,98 @@ export async function GET(
     }
 
     // =================================================
-    // FIND BY DEVICE ID
+    // FIND DEVICE
     // =================================================
 
-    let device =
-      await Device.findOne({
-        deviceId: id,
-      }).lean();
-
-    // =================================================
-    // ALSO SUPPORT MONGODB _ID
-    // =================================================
+    const device =
+      await findDevice(id);
 
     if (!device) {
-      try {
-        device =
-          await Device.findById(
-            id
-          ).lean();
-      } catch {
-        // Invalid MongoDB ObjectId.
-      }
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device not found",
+        },
+        {
+          status: 404,
+        }
+      );
     }
 
     // =================================================
-    // DEVICE DOES NOT EXIST
+    // DEVICE API KEY AUTH
     // =================================================
 
-    if (!device) {
-      return NextResponse.json({
-        success: true,
+    const authenticated =
+      await authenticateDevice(
+        request,
+        {
+          apiKey:
+            device.apiKey,
 
-        deviceId: id,
+          deviceId:
+            device.deviceId,
 
-        deviceName: id,
+          serialId:
+            device.serialId,
 
-        sendInterval:
-          DEFAULT_CONFIG.sendInterval,
+          userId:
+            device.userId,
+        }
+      );
 
-        sensors:
-          DEFAULT_CONFIG.sensors,
-      });
+    if (!authenticated) {
+      console.warn(
+        "[device-config] Unauthorized device request:",
+        {
+          deviceId:
+            device.deviceId,
+
+          serialId:
+            device.serialId,
+
+          ip:
+            request.headers.get(
+              "x-forwarded-for"
+            ) ||
+            request.headers.get(
+              "x-real-ip"
+            ) ||
+            "unknown",
+        }
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    // =================================================
+    // DEVICE MUST BE REGISTERED
+    // =================================================
+
+    if (
+      !device.userId ||
+      !device.apiKey
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device is not registered",
+        },
+        {
+          status: 403,
+        }
+      );
     }
 
     // =================================================
@@ -190,24 +336,30 @@ export async function GET(
         device.sensors
       ) &&
       device.sensors.length > 0
-        ? device.sensors.map(
-            (sensor) => ({
-              slot:
-                sensor.slot,
+        ? device.sensors
+            .map(
+              (sensor) => ({
+                slot:
+                  sensor.slot,
 
-              type:
-                sensor.type ||
-                "N/A",
+                type:
+                  sensor.type ||
+                  "N/A",
 
-              name:
-                sensor.name ||
-                `Sensor #${sensor.slot}`,
+                name:
+                  sensor.name ||
+                  `Sensor #${sensor.slot}`,
 
-              unit:
-                sensor.unit ||
-                "",
-            })
-          )
+                unit:
+                  sensor.unit ||
+                  "",
+              })
+            )
+            .sort(
+              (a, b) =>
+                a.slot -
+                b.slot
+            )
         : DEFAULT_CONFIG.sensors;
 
     // =================================================
@@ -219,6 +371,9 @@ export async function GET(
 
       deviceId:
         device.deviceId,
+
+      serialId:
+        device.serialId,
 
       deviceName:
         device.name ||
@@ -249,6 +404,10 @@ export async function GET(
 
 // =====================================================
 // PUT CONFIGURATION
+//
+// Dashboard only.
+//
+// Requires Better Auth session.
 // =====================================================
 
 export async function PUT(
@@ -263,19 +422,20 @@ export async function PUT(
 ) {
   try {
     // =================================================
-    // AUTHENTICATION
+    // USER AUTHENTICATION
     // =================================================
 
     const session =
-      await auth.api.getSession({
-        headers: request.headers,
-      });
+      await authenticateUser(
+        request
+      );
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized",
+          error:
+            "Unauthorized",
         },
         {
           status: 401,
@@ -306,26 +466,100 @@ export async function PUT(
     }
 
     // =================================================
+    // FIND DEVICE
+    // =================================================
+
+    const device =
+      await findDevice(id);
+
+    if (!device) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Device not found",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // =================================================
+    // OWNERSHIP CHECK
+    // =================================================
+
+    if (
+      !device.userId ||
+      device.userId !==
+        session.user.id
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "You do not have access to this device",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    // =================================================
     // READ BODY
     // =================================================
 
-    const body =
-      await request.json();
+    let body: Record<
+      string,
+      unknown
+    >;
 
-    const {
-      deviceName,
-      sendInterval,
-      sensors,
-    } = body;
+    try {
+      body =
+        await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid JSON body",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const deviceName =
+      body.deviceName;
+
+    const sendInterval =
+      body.sendInterval;
+
+    const sensors =
+      body.sensors;
+
+    // =================================================
+    // LOG
+    // =================================================
 
     console.log(
       "[device-config] PUT request:",
       {
         id,
+
+        userId:
+          session.user.id,
+
         deviceName,
+
         sendInterval,
+
         sensorCount:
-          Array.isArray(sensors)
+          Array.isArray(
+            sensors
+          )
             ? sensors.length
             : 0,
       }
@@ -428,29 +662,39 @@ export async function PUT(
             typeof sensor ===
               "object"
         )
-        .map((sensor) => ({
-          slot: Number(
-            sensor.slot
-          ),
+        .map(
+          (sensor) => {
+            const item =
+              sensor as Record<
+                string,
+                unknown
+              >;
 
-          type:
-            typeof sensor.type ===
-            "string"
-              ? sensor.type.trim()
-              : "N/A",
+            return {
+              slot: Number(
+                item.slot
+              ),
 
-          name:
-            typeof sensor.name ===
-            "string"
-              ? sensor.name.trim()
-              : "",
+              type:
+                typeof item.type ===
+                "string"
+                  ? item.type.trim()
+                  : "N/A",
 
-          unit:
-            typeof sensor.unit ===
-            "string"
-              ? sensor.unit.trim()
-              : "",
-        }))
+              name:
+                typeof item.name ===
+                "string"
+                  ? item.name.trim()
+                  : "",
+
+              unit:
+                typeof item.unit ===
+                "string"
+                  ? item.unit.trim()
+                  : "",
+            };
+          }
+        )
         .filter(
           (sensor) =>
             Number.isInteger(
@@ -510,79 +754,27 @@ export async function PUT(
     }
 
     // =================================================
-    // FIND EXISTING DEVICE
+    // SORT SENSORS
     // =================================================
 
-    let device =
-      await Device.findOne({
-        deviceId: id,
-      }).lean();
-
-    let query:
-      | {
-          deviceId: string;
-        }
-      | {
-          _id: string;
-        };
-
-    if (device) {
-      query = {
-        deviceId:
-          device.deviceId,
-      };
-    } else {
-      // ===============================================
-      // TRY MONGODB OBJECT ID
-      // ===============================================
-
-      try {
-        const byMongoId =
-          await Device.findById(
-            id
-          ).lean();
-
-        if (!byMongoId) {
-          return NextResponse.json(
-            {
-              success: false,
-              error:
-                "Device not found",
-            },
-            {
-              status: 404,
-            }
-          );
-        }
-
-        device =
-          byMongoId;
-
-        query = {
-          _id: id,
-        };
-      } catch {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Device not found",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-    }
+    normalizedSensors.sort(
+      (a, b) =>
+        a.slot -
+        b.slot
+    );
 
     // =================================================
-    // UPDATE DATABASE ATOMICALLY
+    // UPDATE
     // =================================================
 
     const updatedDevice =
       await Device.findOneAndUpdate(
-        query,
-
+        {
+          _id:
+            device._id,
+          userId:
+            session.user.id,
+        },
         {
           $set: {
             name:
@@ -595,16 +787,14 @@ export async function PUT(
               normalizedSensors,
           },
         },
-
         {
           new: true,
-
           runValidators: true,
         }
       ).lean();
 
     // =================================================
-    // VERIFY UPDATE
+    // VERIFY
     // =================================================
 
     if (!updatedDevice) {
@@ -630,6 +820,12 @@ export async function PUT(
         deviceId:
           updatedDevice.deviceId,
 
+        serialId:
+          updatedDevice.serialId,
+
+        userId:
+          updatedDevice.userId,
+
         name:
           updatedDevice.name,
 
@@ -653,6 +849,9 @@ export async function PUT(
 
       deviceId:
         updatedDevice.deviceId,
+
+      serialId:
+        updatedDevice.serialId,
 
       deviceName:
         updatedDevice.name,
