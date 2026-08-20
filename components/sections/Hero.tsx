@@ -19,7 +19,7 @@ export default function Hero() {
       "
     >
       {/* ================================================= */}
-      {/* DARK TECHNICAL BACKGROUND */}
+      {/* PREMIUM DARK ENGINEERING BACKGROUND */}
       {/* ================================================= */}
 
       <div
@@ -31,21 +31,17 @@ export default function Hero() {
           overflow-hidden
         "
       >
-        {/* ----------------------------------------------- */}
-        {/* BASE BACKGROUND */}
-        {/* ----------------------------------------------- */}
+        {/* Base background */}
 
         <div
           className="
             absolute
             inset-0
-            bg-[radial-gradient(circle_at_72%_45%,rgba(37,99,235,0.18),transparent_38%),linear-gradient(135deg,#07111F_0%,#0A1628_50%,#050B14_100%)]
+            bg-[radial-gradient(circle_at_72%_45%,rgba(37,99,235,0.18),transparent_38%),linear-gradient(135deg,#07111F_0%,#0A1628_52%,#050B14_100%)]
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* LARGE BLUE GLOW - LEFT */}
-        {/* ----------------------------------------------- */}
+        {/* Left atmospheric glow */}
 
         <div
           className="
@@ -60,9 +56,7 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* LARGE BLUE GLOW - RIGHT */}
-        {/* ----------------------------------------------- */}
+        {/* Right atmospheric glow */}
 
         <div
           className="
@@ -72,19 +66,17 @@ export default function Hero() {
             h-[700px]
             w-[700px]
             rounded-full
-            bg-primary/[0.10]
+            bg-[#E91E63]/[0.06]
             blur-[160px]
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* CENTER LIGHT BEHIND CIRCUIT */}
-        {/* ----------------------------------------------- */}
+        {/* Main center glow */}
 
         <div
           className="
             absolute
-            left-[65%]
+            left-[67%]
             top-[52%]
             h-[650px]
             w-[650px]
@@ -96,28 +88,26 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* SECOND CENTER GLOW */}
-        {/* ----------------------------------------------- */}
+        {/* Pink center accent */}
 
         <div
           className="
             absolute
             left-[72%]
             top-[50%]
-            h-[300px]
-            w-[300px]
+            h-[320px]
+            w-[320px]
             -translate-x-1/2
             -translate-y-1/2
             rounded-full
-            bg-primary/[0.12]
-            blur-[100px]
+            bg-[#E91E63]/[0.07]
+            blur-[110px]
           "
         />
 
-        {/* ----------------------------------------------- */}
+        {/* ================================================= */}
         {/* ENGINEERING GRID */}
-        {/* ----------------------------------------------- */}
+        {/* ================================================= */}
 
         <div
           className="
@@ -138,8 +128,7 @@ export default function Hero() {
                 transparent 1px
               )
             `,
-            backgroundSize:
-              "48px 48px",
+            backgroundSize: "48px 48px",
             maskImage:
               "radial-gradient(ellipse 90% 80% at 65% 45%, black 15%, transparent 85%)",
             WebkitMaskImage:
@@ -147,9 +136,7 @@ export default function Hero() {
           }}
         />
 
-        {/* ----------------------------------------------- */}
-        {/* SMALL TECHNICAL DOTS */}
-        {/* ----------------------------------------------- */}
+        {/* Technical dot field */}
 
         <div
           className="
@@ -160,8 +147,7 @@ export default function Hero() {
           style={{
             backgroundImage:
               "radial-gradient(rgba(96,165,250,0.45) 1px, transparent 1px)",
-            backgroundSize:
-              "32px 32px",
+            backgroundSize: "32px 32px",
             maskImage:
               "radial-gradient(ellipse 70% 70% at 70% 45%, black, transparent 80%)",
             WebkitMaskImage:
@@ -169,9 +155,9 @@ export default function Hero() {
           }}
         />
 
-        {/* ----------------------------------------------- */}
-        {/* TOP TECHNICAL LINE */}
-        {/* ----------------------------------------------- */}
+        {/* ================================================= */}
+        {/* TECHNICAL LINES */}
+        {/* ================================================= */}
 
         <div
           className="
@@ -190,10 +176,6 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* DIAGONAL LINE 1 */}
-        {/* ----------------------------------------------- */}
-
         <div
           className="
             absolute
@@ -209,10 +191,6 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* DIAGONAL LINE 2 */}
-        {/* ----------------------------------------------- */}
-
         <div
           className="
             absolute
@@ -223,14 +201,10 @@ export default function Hero() {
             rotate-[-18deg]
             bg-gradient-to-r
             from-transparent
-            via-primary/15
+            via-[#E91E63]/20
             to-transparent
           "
         />
-
-        {/* ----------------------------------------------- */}
-        {/* VERTICAL TECHNICAL LINE */}
-        {/* ----------------------------------------------- */}
 
         <div
           className="
@@ -246,10 +220,6 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* HORIZONTAL TECHNICAL LINE */}
-        {/* ----------------------------------------------- */}
-
         <div
           className="
             absolute
@@ -264,9 +234,9 @@ export default function Hero() {
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* TECHNICAL NODE 1 */}
-        {/* ----------------------------------------------- */}
+        {/* ================================================= */}
+        {/* TECHNICAL NODES */}
+        {/* ================================================= */}
 
         <div
           className="
@@ -276,14 +246,10 @@ export default function Hero() {
             h-2
             w-2
             rounded-full
-            bg-blue-400/60
-            shadow-[0_0_22px_rgba(96,165,250,0.7)]
+            bg-blue-400/70
+            shadow-[0_0_22px_rgba(96,165,250,0.8)]
           "
         />
-
-        {/* ----------------------------------------------- */}
-        {/* TECHNICAL NODE 2 */}
-        {/* ----------------------------------------------- */}
 
         <div
           className="
@@ -293,14 +259,10 @@ export default function Hero() {
             h-1.5
             w-1.5
             rounded-full
-            bg-primary/60
-            shadow-[0_0_18px_hsl(var(--primary)/0.7)]
+            bg-[#E91E63]/70
+            shadow-[0_0_18px_rgba(233,30,99,0.8)]
           "
         />
-
-        {/* ----------------------------------------------- */}
-        {/* TECHNICAL NODE 3 */}
-        {/* ----------------------------------------------- */}
 
         <div
           className="
@@ -310,14 +272,10 @@ export default function Hero() {
             h-1.5
             w-1.5
             rounded-full
-            bg-blue-400/50
-            shadow-[0_0_18px_rgba(96,165,250,0.6)]
+            bg-blue-400/60
+            shadow-[0_0_18px_rgba(96,165,250,0.7)]
           "
         />
-
-        {/* ----------------------------------------------- */}
-        {/* TECHNICAL NODE 4 */}
-        {/* ----------------------------------------------- */}
 
         <div
           className="
@@ -327,55 +285,22 @@ export default function Hero() {
             h-1
             w-1
             rounded-full
-            bg-primary/50
-            shadow-[0_0_14px_hsl(var(--primary)/0.6)]
+            bg-[#E91E63]/60
+            shadow-[0_0_14px_rgba(233,30,99,0.7)]
           "
         />
 
-        {/* ----------------------------------------------- */}
-        {/* BOTTOM VIGNETTE */}
-        {/* ----------------------------------------------- */}
+        {/* Bottom vignette */}
 
         <div
           className="
             absolute
             inset-x-0
             bottom-0
-            h-48
+            h-24
             bg-gradient-to-t
-            from-[#050B14]
-            to-transparent
-          "
-        />
-
-        {/* ----------------------------------------------- */}
-        {/* LEFT VIGNETTE */}
-        {/* ----------------------------------------------- */}
-
-        <div
-          className="
-            absolute
-            inset-y-0
-            left-0
-            w-40
-            bg-gradient-to-r
-            from-[#07111F]/60
-            to-transparent
-          "
-        />
-
-        {/* ----------------------------------------------- */}
-        {/* RIGHT VIGNETTE */}
-        {/* ----------------------------------------------- */}
-
-        <div
-          className="
-            absolute
-            inset-y-0
-            right-0
-            w-40
-            bg-gradient-to-l
-            from-[#050B14]/60
+            from-[#07111F]
+            via-[#07111F]/70
             to-transparent
           "
         />
@@ -405,19 +330,11 @@ export default function Hero() {
         "
       >
         {/* ================================================= */}
-        {/* LEFT SIDE */}
+        {/* LEFT */}
         {/* ================================================= */}
 
-        <div
-          className="
-            relative
-            z-10
-            max-w-2xl
-          "
-        >
-          {/* =============================================== */}
-          {/* BADGE */}
-          {/* =============================================== */}
+        <div className="relative z-10 max-w-2xl">
+          {/* Badge */}
 
           <div className="mb-7">
             <div
@@ -427,8 +344,8 @@ export default function Hero() {
                 gap-3
                 rounded-full
                 border
-                border-blue-400/20
-                bg-blue-400/[0.06]
+                border-[#E91E63]/30
+                bg-[#E91E63]/[0.06]
                 px-4
                 py-2
                 backdrop-blur-md
@@ -439,8 +356,8 @@ export default function Hero() {
                   h-2
                   w-2
                   rounded-full
-                  bg-primary
-                  shadow-[0_0_14px_hsl(var(--primary)/0.8)]
+                  bg-[#E91E63]
+                  shadow-[0_0_14px_rgba(233,30,99,0.8)]
                 "
               />
 
@@ -450,7 +367,7 @@ export default function Hero() {
                   font-bold
                   uppercase
                   tracking-[0.24em]
-                  text-primary
+                  text-[#F4729B]
                   sm:text-xs
                 "
               >
@@ -459,9 +376,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* =============================================== */}
-          {/* TITLE */}
-          {/* =============================================== */}
+          {/* Title */}
 
           <h1
             className="
@@ -483,8 +398,8 @@ export default function Hero() {
               className="
                 mt-1
                 block
-                text-primary
-                drop-shadow-[0_0_24px_hsl(var(--primary)/0.25)]
+                text-[#F0447D]
+                drop-shadow-[0_0_28px_rgba(233,30,99,0.25)]
               "
             >
               {t.hero.title2}
@@ -495,9 +410,7 @@ export default function Hero() {
             </span>
           </h1>
 
-          {/* =============================================== */}
-          {/* DESCRIPTION */}
-          {/* =============================================== */}
+          {/* Description */}
 
           <p
             className="
@@ -513,9 +426,7 @@ export default function Hero() {
             {t.hero.description}
           </p>
 
-          {/* =============================================== */}
-          {/* CTA BUTTONS */}
-          {/* =============================================== */}
+          {/* Buttons */}
 
           <div
             className="
@@ -533,18 +444,18 @@ export default function Hero() {
                 items-center
                 justify-center
                 rounded-xl
-                bg-primary
+                bg-[#E91E63]
                 px-7
                 py-3.5
                 text-sm
                 font-semibold
-                text-primary-foreground
-                shadow-[0_0_30px_hsl(var(--primary)/0.18)]
+                text-white
+                shadow-[0_0_30px_rgba(233,30,99,0.18)]
                 transition-all
                 duration-300
                 hover:-translate-y-0.5
-                hover:bg-accent
-                hover:shadow-[0_0_40px_hsl(var(--primary)/0.3)]
+                hover:bg-[#D81B60]
+                hover:shadow-[0_0_40px_rgba(233,30,99,0.35)]
               "
             >
               {t.hero.primaryButton}
@@ -573,18 +484,16 @@ export default function Hero() {
                 transition-all
                 duration-300
                 hover:-translate-y-0.5
-                hover:border-primary/40
-                hover:bg-primary/[0.08]
-                hover:text-primary
+                hover:border-[#E91E63]/50
+                hover:bg-[#E91E63]/[0.08]
+                hover:text-[#F4729B]
               "
             >
               {t.hero.secondaryButton}
             </Link>
           </div>
 
-          {/* =============================================== */}
-          {/* STATISTICS */}
-          {/* =============================================== */}
+          {/* Statistics */}
 
           <div
             className="
@@ -643,7 +552,7 @@ export default function Hero() {
         </div>
 
         {/* ================================================= */}
-        {/* RIGHT SIDE */}
+        {/* RIGHT / CIRCUIT */}
         {/* ================================================= */}
 
         <div
@@ -656,9 +565,7 @@ export default function Hero() {
             lg:min-h-[600px]
           "
         >
-          {/* =============================================== */}
-          {/* LARGE ENGINEERING GLOW */}
-          {/* =============================================== */}
+          {/* Main glow */}
 
           <div
             aria-hidden="true"
@@ -668,16 +575,31 @@ export default function Hero() {
               h-[340px]
               w-[340px]
               rounded-full
-              bg-primary/[0.08]
+              bg-blue-500/[0.08]
               blur-[90px]
               sm:h-[450px]
               sm:w-[450px]
             "
           />
 
-          {/* =============================================== */}
-          {/* OUTER RING */}
-          {/* =============================================== */}
+          {/* Pink glow */}
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              h-[220px]
+              w-[220px]
+              rounded-full
+              bg-[#E91E63]/[0.07]
+              blur-[80px]
+              sm:h-[300px]
+              sm:w-[300px]
+            "
+          />
+
+          {/* Outer ring */}
 
           <div
             aria-hidden="true"
@@ -688,8 +610,8 @@ export default function Hero() {
               w-[340px]
               rounded-full
               border
-              border-primary/15
-              shadow-[0_0_80px_hsl(var(--primary)/0.05)]
+              border-blue-400/15
+              shadow-[0_0_80px_rgba(96,165,250,0.05)]
               sm:h-[450px]
               sm:w-[450px]
               lg:h-[520px]
@@ -697,9 +619,7 @@ export default function Hero() {
             "
           />
 
-          {/* =============================================== */}
-          {/* DASHED RING */}
-          {/* =============================================== */}
+          {/* Dashed ring */}
 
           <div
             aria-hidden="true"
@@ -711,7 +631,7 @@ export default function Hero() {
               rounded-full
               border
               border-dashed
-              border-blue-400/15
+              border-[#E91E63]/15
               sm:h-[360px]
               sm:w-[360px]
               lg:h-[410px]
@@ -719,9 +639,7 @@ export default function Hero() {
             "
           />
 
-          {/* =============================================== */}
-          {/* INNER RING */}
-          {/* =============================================== */}
+          {/* Inner ring */}
 
           <div
             aria-hidden="true"
@@ -732,15 +650,13 @@ export default function Hero() {
               w-[180px]
               rounded-full
               border
-              border-primary/10
+              border-blue-400/10
               sm:h-[250px]
               sm:w-[250px]
             "
           />
 
-          {/* =============================================== */}
-          {/* CIRCUIT GRAPHIC */}
-          {/* =============================================== */}
+          {/* Circuit */}
 
           <div
             className="
@@ -753,9 +669,7 @@ export default function Hero() {
             <CircuitGraphic />
           </div>
 
-          {/* =============================================== */}
-          {/* TECHNICAL LABELS */}
-          {/* =============================================== */}
+          {/* Technical labels */}
 
           <div
             aria-hidden="true"
@@ -780,7 +694,7 @@ export default function Hero() {
               CONTROL
             </span>
 
-            <span className="text-primary/60">
+            <span className="text-[#E91E63]/70">
               •
             </span>
 
@@ -788,7 +702,7 @@ export default function Hero() {
               CONNECT
             </span>
 
-            <span className="text-primary/60">
+            <span className="text-[#E91E63]/70">
               •
             </span>
 
@@ -800,7 +714,7 @@ export default function Hero() {
       </div>
 
       {/* ================================================= */}
-      {/* BOTTOM TRANSITION */}
+      {/* DARK BOTTOM TRANSITION */}
       {/* ================================================= */}
 
       <div
@@ -810,9 +724,10 @@ export default function Hero() {
           absolute
           inset-x-0
           bottom-0
-          h-32
+          h-20
           bg-gradient-to-t
-          from-background
+          from-[#07111F]
+          via-[#07111F]/60
           to-transparent
         "
       />

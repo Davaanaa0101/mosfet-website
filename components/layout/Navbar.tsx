@@ -71,15 +71,20 @@ export default function Navbar() {
       handleScroll
     );
 
-    return () =>
+    return () => {
       window.removeEventListener(
         "scroll",
         handleScroll
       );
+    };
   }, [lastScrollY]);
 
   return (
     <>
+      {/* ================================================= */}
+      {/* NAVBAR */}
+      {/* ================================================= */}
+
       <header
         className={`
           fixed
@@ -96,8 +101,16 @@ export default function Navbar() {
           }
           ${
             scrolled
-              ? "border-b border-primary/10 bg-background/80 backdrop-blur-xl"
-              : "bg-transparent"
+              ? `
+                border-b
+                border-white/10
+                bg-[#07111F]/90
+                shadow-[0_10px_40px_rgba(0,0,0,0.15)]
+                backdrop-blur-xl
+              `
+              : `
+                bg-transparent
+              `
           }
         `}
       >
@@ -115,13 +128,17 @@ export default function Navbar() {
             }
           `}
         >
-          {/* ========================================= */}
+          {/* ================================================= */}
           {/* LOGO */}
-          {/* ========================================= */}
+          {/* ================================================= */}
 
           <Link
             href="/"
-            className="flex items-center"
+            className="
+              group
+              flex
+              items-center
+            "
           >
             <Image
               src="/logo.svg"
@@ -129,15 +146,28 @@ export default function Navbar() {
               width={220}
               height={60}
               priority
-              className="h-12 w-auto"
+              className="
+                h-12
+                w-auto
+                transition-transform
+                duration-300
+                group-hover:scale-[1.02]
+              "
             />
           </Link>
 
-          {/* ========================================= */}
+          {/* ================================================= */}
           {/* NAVIGATION */}
-          {/* ========================================= */}
+          {/* ================================================= */}
 
-          <nav className="hidden items-center gap-8 lg:flex">
+          <nav
+            className="
+              hidden
+              items-center
+              gap-8
+              lg:flex
+            "
+          >
             {links.map(
               (link) => (
                 <Link
@@ -148,51 +178,83 @@ export default function Navbar() {
                     link.href
                   }
                   className="
+                    relative
                     text-sm
                     font-medium
-                    text-muted-foreground
+                    text-white/65
                     transition-colors
-                    hover:text-primary
+                    duration-200
+                    hover:text-white
                   "
                 >
-                  {
-                    link.name
-                  }
+                  {link.name}
+
+                  {/* Hover underline */}
+
+                  <span
+                    className="
+                      absolute
+                      -bottom-2
+                      left-0
+                      h-px
+                      w-0
+                      bg-[#E91E63]
+                      transition-all
+                      duration-300
+                      group-hover:w-full
+                    "
+                  />
                 </Link>
               )
             )}
           </nav>
 
-          {/* ========================================= */}
+          {/* ================================================= */}
           {/* ACTIONS */}
-          {/* ========================================= */}
+          {/* ================================================= */}
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div
+            className="
+              hidden
+              items-center
+              gap-3
+              lg:flex
+            "
+          >
+            {/* ============================================= */}
             {/* LOGIN */}
+            {/* ============================================= */}
 
             <Link
               href="/login"
               className="
+                inline-flex
+                items-center
+                justify-center
                 rounded-xl
                 border
-                border-primary/20
-                bg-background/50
+                border-white/20
+                bg-white/[0.05]
                 px-5
                 py-3
                 text-sm
                 font-semibold
-                text-foreground
+                text-white
+                backdrop-blur-md
                 transition-all
                 duration-300
-                hover:border-primary
-                hover:bg-primary/5
-                hover:text-primary
+                hover:-translate-y-0.5
+                hover:border-[#E91E63]/60
+                hover:bg-[#E91E63]/10
+                hover:text-white
               "
             >
               Login
             </Link>
 
-            {/* GET A QUOTE */}
+            {/* ============================================= */}
+            {/* QUOTE */}
+            {/* ============================================= */}
 
             <button
               type="button"
@@ -202,31 +264,33 @@ export default function Navbar() {
                 )
               }
               className="
+                inline-flex
+                items-center
+                justify-center
                 rounded-xl
-                bg-primary
+                bg-[#E91E63]
                 px-5
                 py-3
                 text-sm
                 font-semibold
-                text-primary-foreground
+                text-white
+                shadow-[0_0_25px_rgba(233,30,99,0.15)]
                 transition-all
                 duration-300
-                hover:bg-accent
-                hover:shadow-lg
-                hover:shadow-primary/30
+                hover:-translate-y-0.5
+                hover:bg-[#D81B60]
+                hover:shadow-[0_0_35px_rgba(233,30,99,0.3)]
               "
             >
-              {
-                t.nav.quote
-              }
+              {t.nav.quote}
             </button>
           </div>
         </Container>
       </header>
 
-      {/* ========================================= */}
+      {/* ================================================= */}
       {/* QUOTE DIALOG */}
-      {/* ========================================= */}
+      {/* ================================================= */}
 
       <QuoteDialog
         open={
