@@ -12,13 +12,14 @@ export default function Hero() {
         min-h-screen
         items-center
         overflow-hidden
-        bg-background
+        bg-[#07111F]
         pt-24
+        text-white
         lg:pt-28
       "
     >
       {/* ================================================= */}
-      {/* PREMIUM ENGINEERING BACKGROUND */}
+      {/* DARK TECHNICAL BACKGROUND */}
       {/* ================================================= */}
 
       <div
@@ -30,257 +31,147 @@ export default function Hero() {
           overflow-hidden
         "
       >
-        {/* =============================================== */}
-        {/* BASE GRADIENT */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* BASE BACKGROUND */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             inset-0
-            bg-gradient-to-br
-            from-background
-            via-background
-            to-primary/[0.035]
+            bg-[radial-gradient(circle_at_72%_45%,rgba(37,99,235,0.18),transparent_38%),linear-gradient(135deg,#07111F_0%,#0A1628_50%,#050B14_100%)]
           "
         />
 
-        {/* =============================================== */}
-        {/* LEFT ATMOSPHERIC GLOW */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* LARGE BLUE GLOW - LEFT */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             -left-[280px]
-            -top-[220px]
+            -top-[250px]
             h-[700px]
             w-[700px]
             rounded-full
-            bg-primary/[0.10]
-            blur-[140px]
+            bg-blue-500/[0.08]
+            blur-[150px]
           "
         />
 
-        {/* =============================================== */}
-        {/* RIGHT ATMOSPHERIC GLOW */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* LARGE BLUE GLOW - RIGHT */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             -right-[220px]
             top-[5%]
-            h-[650px]
-            w-[650px]
+            h-[700px]
+            w-[700px]
             rounded-full
-            bg-primary/[0.07]
-            blur-[150px]
+            bg-primary/[0.10]
+            blur-[160px]
           "
         />
 
-        {/* =============================================== */}
-        {/* CENTER GLOW */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* CENTER LIGHT BEHIND CIRCUIT */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
-            left-[58%]
+            left-[65%]
             top-[52%]
-            h-[600px]
-            w-[600px]
+            h-[650px]
+            w-[650px]
             -translate-x-1/2
             -translate-y-1/2
             rounded-full
-            bg-primary/[0.08]
+            bg-blue-500/[0.10]
             blur-[130px]
           "
         />
 
-        {/* =============================================== */}
-        {/* FINE ENGINEERING GRID */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* SECOND CENTER GLOW */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            left-[72%]
+            top-[50%]
+            h-[300px]
+            w-[300px]
+            -translate-x-1/2
+            -translate-y-1/2
+            rounded-full
+            bg-primary/[0.12]
+            blur-[100px]
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* ENGINEERING GRID */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             inset-0
-            opacity-[0.045]
+            opacity-[0.075]
           "
           style={{
             backgroundImage: `
               linear-gradient(
                 to right,
-                hsl(var(--primary) / 0.35) 1px,
+                rgba(96,165,250,0.35) 1px,
                 transparent 1px
               ),
               linear-gradient(
                 to bottom,
-                hsl(var(--primary) / 0.35) 1px,
+                rgba(96,165,250,0.35) 1px,
                 transparent 1px
               )
             `,
             backgroundSize:
               "48px 48px",
             maskImage:
-              "radial-gradient(ellipse 85% 75% at 55% 45%, black 25%, transparent 85%)",
+              "radial-gradient(ellipse 90% 80% at 65% 45%, black 15%, transparent 85%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse 85% 75% at 55% 45%, black 25%, transparent 85%)",
+              "radial-gradient(ellipse 90% 80% at 65% 45%, black 15%, transparent 85%)",
           }}
         />
 
-        {/* =============================================== */}
-        {/* TECHNICAL DOT FIELD */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* SMALL TECHNICAL DOTS */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             inset-0
-            opacity-[0.22]
+            opacity-[0.28]
           "
           style={{
             backgroundImage:
-              "radial-gradient(hsl(var(--primary) / 0.35) 1px, transparent 1px)",
+              "radial-gradient(rgba(96,165,250,0.45) 1px, transparent 1px)",
             backgroundSize:
               "32px 32px",
             maskImage:
-              "radial-gradient(ellipse 70% 70% at 65% 45%, black, transparent 75%)",
+              "radial-gradient(ellipse 70% 70% at 70% 45%, black, transparent 80%)",
             WebkitMaskImage:
-              "radial-gradient(ellipse 70% 70% at 65% 45%, black, transparent 75%)",
+              "radial-gradient(ellipse 70% 70% at 70% 45%, black, transparent 80%)",
           }}
         />
 
-        {/* =============================================== */}
-        {/* DIAGONAL LIGHT LINE */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            -right-[10%]
-            top-[12%]
-            h-px
-            w-[70%]
-            rotate-[24deg]
-            bg-gradient-to-r
-            from-transparent
-            via-primary/20
-            to-transparent
-            blur-[1px]
-          "
-        />
-
-        {/* =============================================== */}
-        {/* SECOND DIAGONAL LINE */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            -left-[15%]
-            bottom-[20%]
-            h-px
-            w-[65%]
-            rotate-[-18deg]
-            bg-gradient-to-r
-            from-transparent
-            via-primary/10
-            to-transparent
-          "
-        />
-
-        {/* =============================================== */}
-        {/* VERTICAL TECHNICAL BEAM */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            right-[18%]
-            top-[15%]
-            h-[420px]
-            w-px
-            bg-gradient-to-b
-            from-transparent
-            via-primary/15
-            to-transparent
-          "
-        />
-
-        {/* =============================================== */}
-        {/* HORIZONTAL TECHNICAL BEAM */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            right-[5%]
-            top-[42%]
-            h-px
-            w-[400px]
-            bg-gradient-to-r
-            from-transparent
-            via-primary/15
-            to-transparent
-          "
-        />
-
-        {/* =============================================== */}
-        {/* TECHNICAL NODE 1 */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            right-[28%]
-            top-[22%]
-            h-2
-            w-2
-            rounded-full
-            bg-primary/40
-            shadow-[0_0_20px_hsl(var(--primary)/0.5)]
-          "
-        />
-
-        {/* =============================================== */}
-        {/* TECHNICAL NODE 2 */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            right-[12%]
-            top-[48%]
-            h-1.5
-            w-1.5
-            rounded-full
-            bg-primary/30
-            shadow-[0_0_16px_hsl(var(--primary)/0.4)]
-          "
-        />
-
-        {/* =============================================== */}
-        {/* TECHNICAL NODE 3 */}
-        {/* =============================================== */}
-
-        <div
-          className="
-            absolute
-            left-[48%]
-            bottom-[18%]
-            h-1.5
-            w-1.5
-            rounded-full
-            bg-primary/30
-            shadow-[0_0_16px_hsl(var(--primary)/0.4)]
-          "
-        />
-
-        {/* =============================================== */}
-        {/* TOP HORIZONTAL LINE */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* TOP TECHNICAL LINE */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
@@ -293,24 +184,198 @@ export default function Hero() {
             -translate-x-1/2
             bg-gradient-to-r
             from-transparent
-            via-primary/20
+            via-blue-400/20
             to-transparent
             lg:block
           "
         />
 
-        {/* =============================================== */}
-        {/* BOTTOM FADE */}
-        {/* =============================================== */}
+        {/* ----------------------------------------------- */}
+        {/* DIAGONAL LINE 1 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            -right-[5%]
+            top-[17%]
+            h-px
+            w-[65%]
+            rotate-[24deg]
+            bg-gradient-to-r
+            from-transparent
+            via-blue-400/20
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* DIAGONAL LINE 2 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            -left-[15%]
+            bottom-[22%]
+            h-px
+            w-[65%]
+            rotate-[-18deg]
+            bg-gradient-to-r
+            from-transparent
+            via-primary/15
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* VERTICAL TECHNICAL LINE */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            right-[18%]
+            top-[15%]
+            h-[420px]
+            w-px
+            bg-gradient-to-b
+            from-transparent
+            via-blue-400/20
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* HORIZONTAL TECHNICAL LINE */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            right-[5%]
+            top-[42%]
+            h-px
+            w-[400px]
+            bg-gradient-to-r
+            from-transparent
+            via-blue-400/20
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* TECHNICAL NODE 1 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            right-[28%]
+            top-[22%]
+            h-2
+            w-2
+            rounded-full
+            bg-blue-400/60
+            shadow-[0_0_22px_rgba(96,165,250,0.7)]
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* TECHNICAL NODE 2 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            right-[12%]
+            top-[48%]
+            h-1.5
+            w-1.5
+            rounded-full
+            bg-primary/60
+            shadow-[0_0_18px_hsl(var(--primary)/0.7)]
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* TECHNICAL NODE 3 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            left-[48%]
+            bottom-[18%]
+            h-1.5
+            w-1.5
+            rounded-full
+            bg-blue-400/50
+            shadow-[0_0_18px_rgba(96,165,250,0.6)]
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* TECHNICAL NODE 4 */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            left-[14%]
+            top-[32%]
+            h-1
+            w-1
+            rounded-full
+            bg-primary/50
+            shadow-[0_0_14px_hsl(var(--primary)/0.6)]
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* BOTTOM VIGNETTE */}
+        {/* ----------------------------------------------- */}
 
         <div
           className="
             absolute
             inset-x-0
             bottom-0
-            h-40
+            h-48
             bg-gradient-to-t
-            from-background
+            from-[#050B14]
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* LEFT VIGNETTE */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            inset-y-0
+            left-0
+            w-40
+            bg-gradient-to-r
+            from-[#07111F]/60
+            to-transparent
+          "
+        />
+
+        {/* ----------------------------------------------- */}
+        {/* RIGHT VIGNETTE */}
+        {/* ----------------------------------------------- */}
+
+        <div
+          className="
+            absolute
+            inset-y-0
+            right-0
+            w-40
+            bg-gradient-to-l
+            from-[#050B14]/60
             to-transparent
           "
         />
@@ -362,11 +427,11 @@ export default function Hero() {
                 gap-3
                 rounded-full
                 border
-                border-primary/20
-                bg-primary/[0.04]
+                border-blue-400/20
+                bg-blue-400/[0.06]
                 px-4
                 py-2
-                backdrop-blur-sm
+                backdrop-blur-md
               "
             >
               <span
@@ -375,7 +440,7 @@ export default function Hero() {
                   w-2
                   rounded-full
                   bg-primary
-                  shadow-[0_0_12px_hsl(var(--primary)/0.5)]
+                  shadow-[0_0_14px_hsl(var(--primary)/0.8)]
                 "
               />
 
@@ -404,7 +469,7 @@ export default function Hero() {
               font-black
               leading-[0.98]
               tracking-[-0.045em]
-              text-foreground
+              text-white
               sm:text-6xl
               lg:text-7xl
               xl:text-[5.25rem]
@@ -419,6 +484,7 @@ export default function Hero() {
                 mt-1
                 block
                 text-primary
+                drop-shadow-[0_0_24px_hsl(var(--primary)/0.25)]
               "
             >
               {t.hero.title2}
@@ -439,7 +505,7 @@ export default function Hero() {
               max-w-xl
               text-base
               leading-7
-              text-muted-foreground
+              text-slate-300
               sm:text-lg
               sm:leading-8
             "
@@ -473,14 +539,12 @@ export default function Hero() {
                 text-sm
                 font-semibold
                 text-primary-foreground
-                shadow-lg
-                shadow-primary/10
+                shadow-[0_0_30px_hsl(var(--primary)/0.18)]
                 transition-all
                 duration-300
                 hover:-translate-y-0.5
                 hover:bg-accent
-                hover:shadow-xl
-                hover:shadow-primary/20
+                hover:shadow-[0_0_40px_hsl(var(--primary)/0.3)]
               "
             >
               {t.hero.primaryButton}
@@ -498,19 +562,19 @@ export default function Hero() {
                 justify-center
                 rounded-xl
                 border
-                border-border
-                bg-background/60
+                border-white/15
+                bg-white/[0.04]
                 px-7
                 py-3.5
                 text-sm
                 font-semibold
-                text-foreground
-                backdrop-blur-sm
+                text-white
+                backdrop-blur-md
                 transition-all
                 duration-300
                 hover:-translate-y-0.5
                 hover:border-primary/40
-                hover:bg-primary/[0.04]
+                hover:bg-primary/[0.08]
                 hover:text-primary
               "
             >
@@ -528,7 +592,7 @@ export default function Hero() {
               grid
               grid-cols-2
               border-t
-              border-border/70
+              border-white/10
               pt-7
               sm:grid-cols-4
             "
@@ -544,7 +608,7 @@ export default function Hero() {
                     sm:px-5
                     ${
                       index !== 0
-                        ? "border-l border-border/60"
+                        ? "border-l border-white/10"
                         : ""
                     }
                   `}
@@ -554,7 +618,7 @@ export default function Hero() {
                       text-2xl
                       font-black
                       tracking-tight
-                      text-foreground
+                      text-white
                       sm:text-3xl
                     "
                   >
@@ -567,7 +631,7 @@ export default function Hero() {
                       max-w-[110px]
                       text-xs
                       leading-5
-                      text-muted-foreground
+                      text-slate-400
                     "
                   >
                     {item.label}
@@ -593,7 +657,7 @@ export default function Hero() {
           "
         >
           {/* =============================================== */}
-          {/* ENGINEERING FIELD */}
+          {/* LARGE ENGINEERING GLOW */}
           {/* =============================================== */}
 
           <div
@@ -601,13 +665,13 @@ export default function Hero() {
             className="
               pointer-events-none
               absolute
-              h-[320px]
-              w-[320px]
+              h-[340px]
+              w-[340px]
               rounded-full
-              bg-primary/[0.06]
-              blur-3xl
-              sm:h-[420px]
-              sm:w-[420px]
+              bg-primary/[0.08]
+              blur-[90px]
+              sm:h-[450px]
+              sm:w-[450px]
             "
           />
 
@@ -624,7 +688,8 @@ export default function Hero() {
               w-[340px]
               rounded-full
               border
-              border-primary/10
+              border-primary/15
+              shadow-[0_0_80px_hsl(var(--primary)/0.05)]
               sm:h-[450px]
               sm:w-[450px]
               lg:h-[520px]
@@ -633,7 +698,7 @@ export default function Hero() {
           />
 
           {/* =============================================== */}
-          {/* SECOND RING */}
+          {/* DASHED RING */}
           {/* =============================================== */}
 
           <div
@@ -641,16 +706,35 @@ export default function Hero() {
             className="
               pointer-events-none
               absolute
-              h-[260px]
-              w-[260px]
+              h-[270px]
+              w-[270px]
               rounded-full
               border
               border-dashed
-              border-primary/10
-              sm:h-[350px]
-              sm:w-[350px]
+              border-blue-400/15
+              sm:h-[360px]
+              sm:w-[360px]
               lg:h-[410px]
               lg:w-[410px]
+            "
+          />
+
+          {/* =============================================== */}
+          {/* INNER RING */}
+          {/* =============================================== */}
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              h-[180px]
+              w-[180px]
+              rounded-full
+              border
+              border-primary/10
+              sm:h-[250px]
+              sm:w-[250px]
             "
           />
 
@@ -688,7 +772,7 @@ export default function Hero() {
               font-medium
               uppercase
               tracking-[0.25em]
-              text-muted-foreground/50
+              text-slate-500
               lg:flex
             "
           >
@@ -696,7 +780,7 @@ export default function Hero() {
               CONTROL
             </span>
 
-            <span className="text-primary/40">
+            <span className="text-primary/60">
               •
             </span>
 
@@ -704,7 +788,7 @@ export default function Hero() {
               CONNECT
             </span>
 
-            <span className="text-primary/40">
+            <span className="text-primary/60">
               •
             </span>
 
@@ -714,6 +798,24 @@ export default function Hero() {
           </div>
         </div>
       </div>
+
+      {/* ================================================= */}
+      {/* BOTTOM TRANSITION */}
+      {/* ================================================= */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          inset-x-0
+          bottom-0
+          h-32
+          bg-gradient-to-t
+          from-background
+          to-transparent
+        "
+      />
     </section>
   );
 }
