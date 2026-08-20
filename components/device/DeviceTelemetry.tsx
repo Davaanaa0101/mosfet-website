@@ -8,10 +8,21 @@ import {
 } from "react";
 
 import {
+  Activity,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Droplets,
+  Gauge,
+  History,
+  Loader2,
+  Zap,
+} from "lucide-react";
+
+import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 import TelemetryChart, {
@@ -85,26 +96,32 @@ type Range =
 const RANGE_OPTIONS: {
   value: Range;
   label: string;
+  description: string;
 }[] = [
   {
     value: "1h",
     label: "1H",
+    description: "Last hour",
   },
   {
     value: "6h",
     label: "6H",
+    description: "Last 6 hours",
   },
   {
     value: "24h",
     label: "24H",
+    description: "Last 24 hours",
   },
   {
     value: "7d",
     label: "7D",
+    description: "Last 7 days",
   },
   {
     value: "30d",
     label: "30D",
+    description: "Last 30 days",
   },
 ];
 
@@ -122,26 +139,17 @@ type SensorGroup =
 
 // =====================================================
 // STABLE SENSOR COLORS
-//
-// Color is determined by SLOT.
-// Therefore:
-//
-// Slot 1 -> always same color
-// Slot 2 -> always same color
-// Slot 5 -> always same color
-// Slot 6 -> always same color
-//
 // =====================================================
 
 const SENSOR_COLORS = [
-  "#2563eb", // Slot 1 - Blue
-  "#dc2626", // Slot 2 - Red
-  "#16a34a", // Slot 3 - Green
-  "#9333ea", // Slot 4 - Purple
-  "#ea580c", // Slot 5 - Orange
-  "#0891b2", // Slot 6 - Cyan
-  "#db2777", // Slot 7 - Pink
-  "#65a30d", // Slot 8 - Lime
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#9333ea",
+  "#ea580c",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
 ];
 
 // =====================================================
@@ -175,124 +183,127 @@ export default function DeviceTelemetry({
   // ===================================================
 
   const loadConfig =
-    useCallback(async () => {
-      try {
-        const response =
-          await fetch(
-            `/api/devices/${encodeURIComponent(
-              deviceId
-            )}/config`,
-            {
-              method: "GET",
-              cache: "no-store",
-              headers: {
-                Accept:
-                  "application/json",
-              },
-            }
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              `/api/devices/${encodeURIComponent(
+                deviceId
+              )}/config`,
+              {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
+
+          const result =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              result.error ||
+                "Failed to load device configuration"
+            );
+          }
+
+          if (
+            result.success ===
+            false
+          ) {
+            throw new Error(
+              result.error ||
+                "Failed to load device configuration"
+            );
+          }
+
+          setConfig(
+            result as DeviceConfig
+          );
+        } catch (err) {
+          console.error(
+            "[DeviceTelemetry] Config error:",
+            err
           );
 
-        const result =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-              "Failed to load device configuration"
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load device configuration"
           );
         }
-
-        if (
-          result.success ===
-          false
-        ) {
-          throw new Error(
-            result.error ||
-              "Failed to load device configuration"
-          );
-        }
-
-        setConfig(
-          result as DeviceConfig
-        );
-      } catch (err) {
-        console.error(
-          "[DeviceTelemetry] Config error:",
-          err
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load device configuration"
-        );
-      }
-    }, [deviceId]);
+      },
+      [deviceId]
+    );
 
   // ===================================================
   // LOAD TELEMETRY
   // ===================================================
 
   const loadTelemetry =
-    useCallback(async () => {
-      try {
-        const response =
-          await fetch(
-            `/api/devices/${encodeURIComponent(
-              deviceId
-            )}/telemetry?range=${range}&limit=1000`,
-            {
-              method: "GET",
-              cache: "no-store",
-              headers: {
-                Accept:
-                  "application/json",
-              },
-            }
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              `/api/devices/${encodeURIComponent(
+                deviceId
+              )}/telemetry?range=${range}&limit=1000`,
+              {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
+
+          const result =
+            (await response.json()) as TelemetryResponse;
+
+          if (!response.ok) {
+            throw new Error(
+              result.error ||
+                "Failed to load telemetry"
+            );
+          }
+
+          if (
+            !result.success
+          ) {
+            throw new Error(
+              result.error ||
+                "Failed to load telemetry"
+            );
+          }
+
+          setData(
+            result.data ?? []
           );
 
-        const result =
-          (await response.json()) as TelemetryResponse;
-
-        if (!response.ok) {
-          throw new Error(
-            result.error ||
-              "Failed to load telemetry"
+          setError(null);
+        } catch (err) {
+          console.error(
+            "[DeviceTelemetry] Telemetry error:",
+            err
           );
+
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to load telemetry"
+          );
+        } finally {
+          setLoading(false);
         }
-
-        if (
-          !result.success
-        ) {
-          throw new Error(
-            result.error ||
-              "Failed to load telemetry"
-          );
-        }
-
-        setData(
-          result.data ?? []
-        );
-
-        setError(null);
-      } catch (err) {
-        console.error(
-          "[DeviceTelemetry] Telemetry error:",
-          err
-        );
-
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load telemetry"
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [
-      deviceId,
-      range,
-    ]);
+      },
+      [deviceId, range]
+    );
 
   // ===================================================
   // LOAD + AUTO REFRESH
@@ -308,12 +319,10 @@ export default function DeviceTelemetry({
       setInterval(() => {
         loadConfig();
         loadTelemetry();
-      }, 10000);
+      }, 10_000);
 
     return () => {
-      clearInterval(
-        interval
-      );
+      clearInterval(interval);
     };
   }, [
     loadConfig,
@@ -429,10 +438,6 @@ export default function DeviceTelemetry({
           };
         }
 
-        // ---------------------------------------------
-        // SERIES
-        // ---------------------------------------------
-
         const series: TelemetrySeries[] =
           sensors.map(
             (sensor) => ({
@@ -445,16 +450,11 @@ export default function DeviceTelemetry({
 
               color:
                 SENSOR_COLORS[
-                  (sensor.slot -
-                    1) %
+                  (sensor.slot - 1) %
                     SENSOR_COLORS.length
                 ],
             })
           );
-
-        // ---------------------------------------------
-        // DATA
-        // ---------------------------------------------
 
         const chartData: ChartData[] =
           data.map(
@@ -630,236 +630,594 @@ export default function DeviceTelemetry({
     ]);
 
   // ===================================================
+  // SUMMARY
+  // ===================================================
+
+  const rangeLabel =
+    RANGE_OPTIONS.find(
+      (item) =>
+        item.value === range
+    )?.description ??
+    "Selected period";
+
+  // ===================================================
   // RENDER
   // ===================================================
 
   return (
     <div className="space-y-6">
 
-      {/* ============================================= */}
+      {/* ================================================= */}
       {/* HEADER */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card
+        className="
+          overflow-hidden
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardContent className="p-0">
 
-            <div>
-              <CardTitle>
-                Historical Telemetry
-              </CardTitle>
+          {/* Header */}
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                {config?.deviceName ||
-                  "Device"}{" "}
-                sensor history
-              </p>
-            </div>
+          <div
+            className="
+              relative
+              overflow-hidden
+              border-b
+              border-slate-100
+              p-5
+              sm:p-6
+            "
+          >
+            <div
+              className="
+                pointer-events-none
+                absolute
+                -right-24
+                -top-24
+                h-64
+                w-64
+                rounded-full
+                bg-primary/5
+                blur-3xl
+              "
+            />
 
-            {/* RANGE SELECTOR */}
+            <div
+              className="
+                relative
+                flex
+                flex-col
+                gap-5
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
+              "
+            >
+              {/* Title */}
 
-            <div className="flex flex-wrap gap-2">
-              {RANGE_OPTIONS.map(
-                (option) => {
-                  const active =
-                    range ===
-                    option.value;
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-11
+                    w-11
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-primary/10
+                  "
+                >
+                  <History
+                    className="
+                      h-5
+                      w-5
+                      text-primary
+                    "
+                  />
+                </div>
 
-                  return (
-                    <button
-                      key={
-                        option.value
-                      }
-                      type="button"
-                      onClick={() =>
-                        setRange(
+                <div>
+                  <h2
+                    className="
+                      text-lg
+                      font-bold
+                      tracking-tight
+                      text-slate-900
+                    "
+                  >
+                    Historical Telemetry
+                  </h2>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-xs
+                      text-slate-400
+                    "
+                  >
+                    {config?.deviceName ||
+                      "Device"}{" "}
+                    · {rangeLabel}
+                  </p>
+                </div>
+              </div>
+
+              {/* RANGE */}
+
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-1
+                  overflow-x-auto
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  p-1
+                "
+              >
+                {RANGE_OPTIONS.map(
+                  (option) => {
+                    const active =
+                      range ===
+                      option.value;
+
+                    return (
+                      <button
+                        key={
                           option.value
-                        )
-                      }
-                      className={[
-                        "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-background hover:bg-muted",
-                      ].join(" ")}
-                    >
-                      {
-                        option.label
-                      }
-                    </button>
-                  );
-                }
-              )}
+                        }
+                        type="button"
+                        onClick={() =>
+                          setRange(
+                            option.value
+                          )
+                        }
+                        className={`
+                          shrink-0
+                          rounded-lg
+                          px-3
+                          py-2
+                          text-[11px]
+                          font-bold
+                          transition-all
+                          duration-200
+                          ${
+                            active
+                              ? "bg-white text-primary shadow-sm ring-1 ring-slate-200"
+                              : "text-slate-400 hover:bg-white/70 hover:text-slate-600"
+                          }
+                        `}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent>
-          {loading &&
-            data.length ===
-              0 && (
-              <p className="text-sm text-muted-foreground">
-                Loading telemetry...
-              </p>
-            )}
+          {/* Summary */}
 
-          {!loading &&
-            error && (
-              <p className="text-sm text-destructive">
-                {error}
-              </p>
-            )}
+          <div
+            className="
+              grid
+              grid-cols-2
+              divide-x
+              divide-slate-100
+              sm:grid-cols-3
+            "
+          >
+            <SummaryItem
+              icon={BarChart3}
+              label="Records"
+              value={
+                data.length
+              }
+            />
 
-          {!loading &&
-            !error &&
-            data.length ===
-              0 && (
-              <p className="text-sm text-muted-foreground">
-                No telemetry data available for this period.
-              </p>
-            )}
+            <SummaryItem
+              icon={Activity}
+              label="Sensors"
+              value={
+                configuredSensors.length
+              }
+            />
 
-          {data.length >
-            0 && (
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">
-                {data.length} telemetry
-                records ·{" "}
-                {range.toUpperCase()}
-              </p>
-
-              <p className="text-xs text-muted-foreground">
-                {
-                  configuredSensors.length
-                }{" "}
-                configured sensors
-              </p>
+            <div className="hidden sm:block">
+              <SummaryItem
+                icon={Clock3}
+                label="Refresh"
+                value="10 sec"
+              />
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* ============================================= */}
-      {/* TEMPERATURE */}
-      {/* ============================================= */}
+      {/* ================================================= */}
+      {/* LOADING */}
+      {/* ================================================= */}
+
+      {loading &&
+        data.length === 0 && (
+          <Card
+            className="
+              rounded-3xl
+              border-slate-200
+              bg-white
+            "
+          >
+            <CardContent
+              className="
+                flex
+                min-h-[180px]
+                items-center
+                justify-center
+              "
+            >
+              <div
+                className="
+                  flex
+                  flex-col
+                  items-center
+                  gap-3
+                "
+              >
+                <Loader2
+                  className="
+                    h-7
+                    w-7
+                    animate-spin
+                    text-primary
+                  "
+                />
+
+                <p
+                  className="
+                    text-sm
+                    text-slate-400
+                  "
+                >
+                  Loading telemetry...
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* ================================================= */}
+      {/* ERROR */}
+      {/* ================================================= */}
+
+      {!loading &&
+        error && (
+          <Card
+            className="
+              rounded-3xl
+              border-red-200
+              bg-red-50
+            "
+          >
+            <CardContent className="p-5">
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-9
+                    w-9
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-red-100
+                  "
+                >
+                  <Activity
+                    className="
+                      h-4
+                      w-4
+                      text-red-600
+                    "
+                  />
+                </div>
+
+                <div>
+                  <p
+                    className="
+                      text-sm
+                      font-semibold
+                      text-red-700
+                    "
+                  >
+                    Unable to load telemetry
+                  </p>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-xs
+                      text-red-600
+                    "
+                  >
+                    {error}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* ================================================= */}
+      {/* NO DATA */}
+      {/* ================================================= */}
+
+      {!loading &&
+        !error &&
+        data.length === 0 && (
+          <Card
+            className="
+              rounded-3xl
+              border-slate-200
+              bg-white
+            "
+          >
+            <CardContent
+              className="
+                flex
+                min-h-[180px]
+                flex-col
+                items-center
+                justify-center
+                text-center
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-12
+                  w-12
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  bg-slate-100
+                "
+              >
+                <BarChart3
+                  className="
+                    h-5
+                    w-5
+                    text-slate-400
+                  "
+                />
+              </div>
+
+              <p
+                className="
+                  mt-4
+                  text-sm
+                  font-semibold
+                  text-slate-700
+                "
+              >
+                No telemetry data
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-xs
+                  text-slate-400
+                "
+              >
+                No telemetry data is available
+                for this period.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+      {/* ================================================= */}
+      {/* SENSOR CHARTS */}
+      {/* ================================================= */}
 
       {temperatureChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Activity}
           title="Temperature"
-          data={
-            temperatureChart.data
-          }
-          series={
-            temperatureChart.series
-          }
-          unit="°C"
-        />
+          subtitle="Temperature sensor history"
+        >
+          <TelemetryChart
+            title="Temperature"
+            data={
+              temperatureChart.data
+            }
+            series={
+              temperatureChart.series
+            }
+            unit="°C"
+          />
+        </ChartSection>
       )}
-
-      {/* ============================================= */}
-      {/* HUMIDITY */}
-      {/* ============================================= */}
 
       {humidityChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Droplets}
           title="Humidity"
-          data={
-            humidityChart.data
-          }
-          series={
-            humidityChart.series
-          }
-          unit="%"
-        />
+          subtitle="Humidity sensor history"
+        >
+          <TelemetryChart
+            title="Humidity"
+            data={
+              humidityChart.data
+            }
+            series={
+              humidityChart.series
+            }
+            unit="%"
+          />
+        </ChartSection>
       )}
-
-      {/* ============================================= */}
-      {/* CURRENT */}
-      {/* ============================================= */}
 
       {currentChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Zap}
           title="Current"
-          data={
-            currentChart.data
-          }
-          series={
-            currentChart.series
-          }
-          unit="A"
-        />
+          subtitle="Electrical current history"
+        >
+          <TelemetryChart
+            title="Current"
+            data={
+              currentChart.data
+            }
+            series={
+              currentChart.series
+            }
+            unit="A"
+          />
+        </ChartSection>
       )}
-
-      {/* ============================================= */}
-      {/* VOLTAGE */}
-      {/* ============================================= */}
 
       {voltageChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Gauge}
           title="Voltage"
-          data={
-            voltageChart.data
-          }
-          series={
-            voltageChart.series
-          }
-          unit="V"
-        />
+          subtitle="Voltage sensor history"
+        >
+          <TelemetryChart
+            title="Voltage"
+            data={
+              voltageChart.data
+            }
+            series={
+              voltageChart.series
+            }
+            unit="V"
+          />
+        </ChartSection>
       )}
-
-      {/* ============================================= */}
-      {/* POWER */}
-      {/* ============================================= */}
 
       {powerChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Zap}
           title="Power"
-          data={
-            powerChart.data
-          }
-          series={
-            powerChart.series
-          }
-          unit="W"
-        />
+          subtitle="Power consumption history"
+        >
+          <TelemetryChart
+            title="Power"
+            data={
+              powerChart.data
+            }
+            series={
+              powerChart.series
+            }
+            unit="W"
+          />
+        </ChartSection>
       )}
-
-      {/* ============================================= */}
-      {/* ENERGY */}
-      {/* ============================================= */}
 
       {energyChart.series
         .length > 0 && (
-        <TelemetryChart
+        <ChartSection
+          icon={Zap}
           title="Energy"
-          data={
-            energyChart.data
-          }
-          series={
-            energyChart.series
-          }
-          unit="Wh"
-        />
+          subtitle="Energy consumption history"
+        >
+          <TelemetryChart
+            title="Energy"
+            data={
+              energyChart.data
+            }
+            series={
+              energyChart.series
+            }
+            unit="Wh"
+          />
+        </ChartSection>
       )}
 
-      {/* ============================================= */}
+      {/* ================================================= */}
       {/* SYSTEM TELEMETRY */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
       {data.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold">
-            System Telemetry
-          </h2>
+          <div
+            className="
+              mb-4
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-xl
+                bg-slate-100
+              "
+            >
+              <Zap
+                className="
+                  h-4
+                  w-4
+                  text-slate-500
+                "
+              />
+            </div>
 
-          <div className="space-y-6">
+            <div>
+              <h2
+                className="
+                  text-base
+                  font-bold
+                  text-slate-800
+                "
+              >
+                System Telemetry
+              </h2>
 
-            {/* CURRENT */}
+              <p
+                className="
+                  text-xs
+                  text-slate-400
+                "
+              >
+                Device-level electrical measurements
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-5">
 
             {genericChartData.some(
               (item) =>
@@ -883,8 +1241,6 @@ export default function DeviceTelemetry({
               />
             )}
 
-            {/* VOLTAGE */}
-
             {genericChartData.some(
               (item) =>
                 item.voltage !==
@@ -907,8 +1263,6 @@ export default function DeviceTelemetry({
               />
             )}
 
-            {/* POWER */}
-
             {genericChartData.some(
               (item) =>
                 item.power !==
@@ -930,8 +1284,6 @@ export default function DeviceTelemetry({
                 unit="W"
               />
             )}
-
-            {/* ENERGY */}
 
             {genericChartData.some(
               (item) =>
@@ -959,29 +1311,209 @@ export default function DeviceTelemetry({
         </div>
       )}
 
-      {/* ============================================= */}
-      {/* EMPTY */}
-      {/* ============================================= */}
+      {/* ================================================= */}
+      {/* EMPTY CONFIGURATION */}
+      {/* ================================================= */}
 
       {!loading &&
         !error &&
         data.length > 0 &&
         configuredSensors.length ===
           0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                Sensor History
-              </CardTitle>
-            </CardHeader>
+          <Card
+            className="
+              rounded-3xl
+              border-slate-200
+              bg-white
+            "
+          >
+            <CardContent className="p-5">
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-3
+                "
+              >
+                <div
+                  className="
+                    flex
+                    h-9
+                    w-9
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-amber-50
+                  "
+                >
+                  <CalendarDays
+                    className="
+                      h-4
+                      w-4
+                      text-amber-500
+                    "
+                  />
+                </div>
 
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                No configured sensors found.
-              </p>
+                <div>
+                  <p
+                    className="
+                      text-sm
+                      font-semibold
+                      text-slate-700
+                    "
+                  >
+                    No configured sensors
+                  </p>
+
+                  <p
+                    className="
+                      mt-0.5
+                      text-xs
+                      text-slate-400
+                    "
+                  >
+                    Telemetry exists, but no
+                    sensors are configured for
+                    this device.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
+    </div>
+  );
+}
+
+// =====================================================
+// SUMMARY ITEM
+// =====================================================
+
+function SummaryItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Activity;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div
+      className="
+        flex
+        items-center
+        gap-3
+        px-5
+        py-4
+      "
+    >
+      <Icon
+        className="
+          h-4
+          w-4
+          shrink-0
+          text-slate-400
+        "
+      />
+
+      <div>
+        <p
+          className="
+            text-[9px]
+            font-bold
+            uppercase
+            tracking-widest
+            text-slate-400
+          "
+        >
+          {label}
+        </p>
+
+        <p
+          className="
+            mt-0.5
+            text-sm
+            font-bold
+            text-slate-700
+          "
+        >
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// CHART SECTION
+// =====================================================
+
+function ChartSection({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: typeof Activity;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div
+        className="
+          mb-3
+          flex
+          items-center
+          gap-3
+        "
+      >
+        <div
+          className="
+            flex
+            h-9
+            w-9
+            items-center
+            justify-center
+            rounded-xl
+            bg-primary/10
+          "
+        >
+          <Icon
+            className="
+              h-4
+              w-4
+              text-primary
+            "
+          />
+        </div>
+
+        <div>
+          <h2
+            className="
+              text-base
+              font-bold
+              text-slate-800
+            "
+          >
+            {title}
+          </h2>
+
+          <p
+            className="
+              text-xs
+              text-slate-400
+            "
+          >
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      {children}
     </div>
   );
 }
@@ -1070,11 +1602,9 @@ function validNumber(
     | null
     | undefined
 ): number | null {
-  return (
-    typeof value ===
-      "number" &&
+  return typeof value ===
+    "number" &&
     Number.isFinite(value)
-  )
     ? value
     : null;
 }

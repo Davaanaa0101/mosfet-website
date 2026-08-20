@@ -1,10 +1,18 @@
 "use client";
 
 import {
+  useMemo,
+} from "react";
+
+import {
+  Activity,
+  BarChart3,
+  Clock3,
+} from "lucide-react";
+
+import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 import {
@@ -32,7 +40,10 @@ export interface ChartData {
   createdAt: string;
   time: string;
 
-  [key: string]: string | number | null;
+  [key: string]:
+    | string
+    | number
+    | null;
 }
 
 interface TelemetryChartProps {
@@ -52,13 +63,69 @@ export default function TelemetryChart({
   series,
   unit,
 }: TelemetryChartProps) {
+  // ===================================================
+  // VALID SERIES
+  // ===================================================
+
   const validSeries =
-    series.filter(
-      (item) =>
-        item.key &&
-        item.name &&
-        item.color
+    useMemo(
+      () =>
+        series.filter(
+          (item) =>
+            Boolean(item.key) &&
+            Boolean(item.name) &&
+            Boolean(item.color)
+        ),
+      [series]
     );
+
+  // ===================================================
+  // LATEST VALUES
+  // ===================================================
+
+  const latestValues =
+    useMemo(() => {
+      if (data.length === 0) {
+        return [];
+      }
+
+      const latest =
+        data[data.length - 1];
+
+      return validSeries
+        .map((item) => {
+          const raw =
+            latest[item.key];
+
+          const value =
+            typeof raw === "number"
+              ? raw
+              : Number(raw);
+
+          if (
+            !Number.isFinite(
+              value
+            )
+          ) {
+            return null;
+          }
+
+          return {
+            ...item,
+            value,
+          };
+        })
+        .filter(
+          (
+            item
+          ): item is TelemetrySeries & {
+            value: number;
+          } => item !== null
+        );
+    }, [
+      data,
+      validSeries,
+    ]);
 
   // ===================================================
   // EMPTY STATE
@@ -69,38 +136,247 @@ export default function TelemetryChart({
     validSeries.length === 0
   ) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {title}
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent>
-          <div className="flex h-[350px] items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              No {title.toLowerCase()} data available.
-            </p>
+      <Card
+        className="
+          overflow-hidden
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardContent
+          className="
+            flex
+            min-h-[360px]
+            flex-col
+            items-center
+            justify-center
+            text-center
+          "
+        >
+          <div
+            className="
+              flex
+              h-14
+              w-14
+              items-center
+              justify-center
+              rounded-2xl
+              bg-slate-100
+            "
+          >
+            <BarChart3
+              className="
+                h-6
+                w-6
+                text-slate-400
+              "
+            />
           </div>
+
+          <h3
+            className="
+              mt-4
+              text-base
+              font-bold
+              text-slate-700
+            "
+          >
+            {title}
+          </h3>
+
+          <p
+            className="
+              mt-1
+              max-w-xs
+              text-sm
+              text-slate-400
+            "
+          >
+            No {title.toLowerCase()} data
+            available for this period.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
   // ===================================================
-  // CHART
+  // RENDER
   // ===================================================
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {title}
-        </CardTitle>
-      </CardHeader>
+    <Card
+      className="
+        overflow-hidden
+        rounded-3xl
+        border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
+      {/* ================================================= */}
+      {/* HEADER */}
+      {/* ================================================= */}
 
-      <CardContent>
-        <div className="h-[350px] w-full">
+      <div
+        className="
+          border-b
+          border-slate-100
+          px-5
+          py-5
+          sm:px-6
+        "
+      >
+        <div
+          className="
+            flex
+            flex-col
+            gap-4
+            lg:flex-row
+            lg:items-center
+            lg:justify-between
+          "
+        >
+          {/* TITLE */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                shrink-0
+                items-center
+                justify-center
+                rounded-xl
+                bg-primary/10
+              "
+            >
+              <Activity
+                className="
+                  h-5
+                  w-5
+                  text-primary
+                "
+              />
+            </div>
+
+            <div>
+              <h3
+                className="
+                  text-base
+                  font-bold
+                  tracking-tight
+                  text-slate-900
+                "
+              >
+                {title}
+              </h3>
+
+              <p
+                className="
+                  mt-0.5
+                  text-xs
+                  text-slate-400
+                "
+              >
+                Historical telemetry
+              </p>
+            </div>
+          </div>
+
+          {/* LATEST VALUES */}
+
+          {latestValues.length >
+            0 && (
+            <div
+              className="
+                flex
+                flex-wrap
+                items-center
+                gap-2
+              "
+            >
+              {latestValues.map(
+                (item) => (
+                  <div
+                    key={
+                      item.key
+                    }
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                      rounded-xl
+                      border
+                      border-slate-100
+                      bg-slate-50
+                      px-3
+                      py-2
+                    "
+                  >
+                    <span
+                      className="
+                        h-2
+                        w-2
+                        rounded-full
+                      "
+                      style={{
+                        backgroundColor:
+                          item.color,
+                      }}
+                    />
+
+                    <span
+                      className="
+                        text-[10px]
+                        font-medium
+                        text-slate-400
+                      "
+                    >
+                      {item.name}
+                    </span>
+
+                    <span
+                      className="
+                        text-xs
+                        font-bold
+                        text-slate-700
+                      "
+                    >
+                      {formatNumber(
+                        item.value
+                      )}{" "}
+                      {unit}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ================================================= */}
+      {/* CHART */}
+      {/* ================================================= */}
+
+      <CardContent className="p-4 sm:p-6">
+        <div
+          className="
+            h-[320px]
+            w-full
+            sm:h-[360px]
+          "
+        >
           <ResponsiveContainer
             width="100%"
             height="100%"
@@ -108,74 +384,98 @@ export default function TelemetryChart({
             <LineChart
               data={data}
               margin={{
-                top: 10,
-                right: 25,
-                left: 10,
-                bottom: 10,
+                top: 12,
+                right: 16,
+                left: 0,
+                bottom: 8,
               }}
             >
-              {/* ===================================== */}
               {/* GRID */}
-              {/* ===================================== */}
 
               <CartesianGrid
-                strokeDasharray="3 3"
-                className="stroke-muted"
+                stroke="#e2e8f0"
+                strokeDasharray="4 5"
+                vertical={false}
               />
 
-              {/* ===================================== */}
               {/* X AXIS */}
-              {/* ===================================== */}
 
               <XAxis
                 dataKey="time"
                 tickLine={false}
                 axisLine={false}
-                minTickGap={30}
+                minTickGap={35}
                 tick={{
-                  fontSize: 12,
+                  fontSize: 11,
+                  fill: "#94a3b8",
                 }}
+                dy={8}
               />
 
-              {/* ===================================== */}
               {/* Y AXIS */}
-              {/* ===================================== */}
 
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={70}
+                width={65}
                 tick={{
-                  fontSize: 12,
+                  fontSize: 11,
+                  fill: "#94a3b8",
                 }}
                 tickFormatter={(
                   value: number
                 ) =>
-                  unit
-                    ? `${value} ${unit}`
-                    : String(value)
+                  formatAxisValue(
+                    value,
+                    unit
+                  )
                 }
               />
 
-              {/* ===================================== */}
               {/* TOOLTIP */}
-              {/* ===================================== */}
 
               <Tooltip
+                cursor={{
+                  stroke:
+                    "#cbd5e1",
+                  strokeWidth: 1,
+                  strokeDasharray:
+                    "4 4",
+                }}
                 contentStyle={{
-                  borderRadius:
-                    "8px",
                   border:
-                    "1px solid hsl(var(--border))",
+                    "1px solid #e2e8f0",
+                  borderRadius:
+                    "14px",
                   background:
-                    "hsl(var(--background))",
+                    "#ffffff",
+                  boxShadow:
+                    "0 10px 30px rgba(15,23,42,0.10)",
+                  padding:
+                    "10px 12px",
+                }}
+                labelStyle={{
+                  color:
+                    "#64748b",
+                  fontSize:
+                    "11px",
+                  fontWeight:
+                    600,
+                  marginBottom:
+                    "6px",
+                }}
+                itemStyle={{
+                  fontSize:
+                    "12px",
+                  fontWeight:
+                    600,
+                  padding:
+                    "2px 0",
                 }}
                 labelFormatter={(
                   label
                 ) =>
-                  `Time: ${String(
-                    label
-                  )}`
+                  String(label)
                 }
                 formatter={(
                   rawValue,
@@ -189,10 +489,22 @@ export default function TelemetryChart({
                           rawValue
                         );
 
-                  const label =
+                  const key =
                     String(
-                      dataKey ?? ""
+                      dataKey ??
+                        ""
                     );
+
+                  const matched =
+                    validSeries.find(
+                      (item) =>
+                        item.key ===
+                        key
+                    );
+
+                  const label =
+                    matched?.name ??
+                    key;
 
                   if (
                     Number.isFinite(
@@ -200,43 +512,39 @@ export default function TelemetryChart({
                     )
                   ) {
                     return [
-                      unit
-                        ? `${value.toFixed(
-                            2
-                          )} ${unit}`
-                        : value.toFixed(
-                            2
-                          ),
+                      `${formatNumber(
+                        value
+                      )} ${unit}`,
                       label,
                     ];
                   }
 
                   return [
-                    String(
-                      rawValue
-                    ),
+                    "--",
                     label,
                   ];
                 }}
               />
 
-              {/* ===================================== */}
               {/* LEGEND */}
-              {/* ===================================== */}
 
               <Legend
                 verticalAlign="bottom"
-                height={55}
+                align="center"
+                height={38}
+                iconType="circle"
+                iconSize={7}
                 wrapperStyle={{
-                  fontSize: "12px",
+                  fontSize:
+                    "11px",
                   paddingTop:
-                    "10px",
+                    "12px",
+                  color:
+                    "#64748b",
                 }}
               />
 
-              {/* ===================================== */}
-              {/* SENSOR LINES */}
-              {/* ===================================== */}
+              {/* LINES */}
 
               {validSeries.map(
                 (item) => (
@@ -254,17 +562,20 @@ export default function TelemetryChart({
                     stroke={
                       item.color
                     }
+                    strokeWidth={2.5}
                     dot={false}
-                    strokeWidth={2}
                     activeDot={{
                       r: 5,
+                      strokeWidth: 2,
+                      stroke:
+                        "#ffffff",
                     }}
                     isAnimationActive={
                       false
                     }
                     connectNulls={
                       false
-                  }
+                    }
                   />
                 )
               )}
@@ -272,27 +583,146 @@ export default function TelemetryChart({
           </ResponsiveContainer>
         </div>
 
-        {/* =========================================== */}
+        {/* ================================================= */}
         {/* FOOTER */}
-        {/* =========================================== */}
+        {/* ================================================= */}
 
-        <div className="mt-4 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-          <span>
-            {data.length}{" "}
-            readings
-          </span>
+        <div
+          className="
+            mt-4
+            flex
+            flex-col
+            gap-3
+            border-t
+            border-slate-100
+            pt-4
+            text-xs
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              gap-2
+              text-slate-400
+            "
+          >
+            <BarChart3
+              className="
+                h-3.5
+                w-3.5
+              "
+            />
 
-          <span>
-            {validSeries.length}{" "}
-            sensor
-            {validSeries.length !==
-            1
-              ? "s"
-              : ""}{" "}
-            · {unit || "—"}
-          </span>
+            <span>
+              {data.length} reading
+              {data.length !== 1
+                ? "s"
+                : ""}
+            </span>
+          </div>
+
+          <div
+            className="
+              flex
+              items-center
+              gap-2
+              text-slate-400
+            "
+          >
+            <Clock3
+              className="
+                h-3.5
+                w-3.5
+              "
+            />
+
+            <span>
+              {validSeries.length} sensor
+              {validSeries.length !== 1
+                ? "s"
+                : ""}
+              {" · "}
+              {unit || "No unit"}
+            </span>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+// =====================================================
+// NUMBER FORMAT
+// =====================================================
+
+function formatNumber(
+  value: number
+): string {
+  if (
+    !Number.isFinite(
+      value
+    )
+  ) {
+    return "--";
+  }
+
+  const absolute =
+    Math.abs(value);
+
+  if (
+    absolute >= 100
+  ) {
+    return value.toFixed(0);
+  }
+
+  if (
+    absolute >= 10
+  ) {
+    return value.toFixed(1);
+  }
+
+  return value.toFixed(2);
+}
+
+// =====================================================
+// AXIS FORMAT
+// =====================================================
+
+function formatAxisValue(
+  value: number,
+  unit: string
+): string {
+  if (
+    !Number.isFinite(
+      value
+    )
+  ) {
+    return "";
+  }
+
+  if (
+    Math.abs(value) >=
+    100
+  ) {
+    return `${value.toFixed(
+      0
+    )}${unit ? ` ${unit}` : ""}`;
+  }
+
+  if (
+    Math.abs(value) >=
+    10
+  ) {
+    return `${value.toFixed(
+      1
+    )}${unit ? ` ${unit}` : ""}`;
+  }
+
+  return `${value.toFixed(
+    2
+  )}${unit ? ` ${unit}` : ""}`;
 }

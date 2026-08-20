@@ -3,8 +3,24 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+
+import {
+  Activity,
+  Check,
+  Clock3,
+  Cpu,
+  Gauge,
+  Info,
+  Loader2,
+  Save,
+  Settings2,
+  Thermometer,
+  Wifi,
+  Zap,
+} from "lucide-react";
 
 import {
   Card,
@@ -28,8 +44,7 @@ interface DeviceConfig {
   deviceId: string;
   deviceName: string;
 
-  // IMPORTANT:
-  // Backend / ESP32 continues to use milliseconds.
+  // Backend / ESP32 uses milliseconds.
   sendInterval: number;
 
   sensors: SensorConfig[];
@@ -133,7 +148,6 @@ function millisecondsToInterval(
         : MIN_INTERVAL_MS
     );
 
-  // Exact hours
   if (
     safeMilliseconds >=
       HOUR_MS &&
@@ -149,7 +163,6 @@ function millisecondsToInterval(
     };
   }
 
-  // Exact minutes
   if (
     safeMilliseconds >=
       MINUTE_MS &&
@@ -165,7 +178,6 @@ function millisecondsToInterval(
     };
   }
 
-  // Seconds
   return {
     value: Math.max(
       1,
@@ -222,6 +234,35 @@ function formatIntervalPreview(
     unit,
     safeValue
   )}`;
+}
+
+// =====================================================
+// SENSOR ICON
+// =====================================================
+
+function getSensorIcon(
+  type: string
+) {
+  switch (type) {
+    case "TEMPERATURE":
+    case "DHT_TEMPERATURE":
+      return Thermometer;
+
+    case "CURRENT":
+      return Zap;
+
+    case "VOLTAGE":
+      return Activity;
+
+    case "POWER":
+      return Gauge;
+
+    case "DHT_HUMIDITY":
+      return Activity;
+
+    default:
+      return Cpu;
+  }
 }
 
 // =====================================================
@@ -300,10 +341,6 @@ export default function DeviceConfiguration({
           const data =
             (await response.json()) as DeviceConfig;
 
-          // -------------------------------------------
-          // Convert milliseconds → user-friendly unit
-          // -------------------------------------------
-
           const interval =
             millisecondsToInterval(
               data.sendInterval
@@ -316,10 +353,6 @@ export default function DeviceConfiguration({
           setIntervalUnit(
             interval.unit
           );
-
-          // -------------------------------------------
-          // Store configuration
-          // -------------------------------------------
 
           setConfig({
             deviceId:
@@ -391,9 +424,7 @@ export default function DeviceConfiguration({
       Number(value);
 
     setIntervalValue(
-      Number.isFinite(
-        parsed
-      )
+      Number.isFinite(parsed)
         ? Math.max(
             1,
             parsed
@@ -459,10 +490,6 @@ export default function DeviceConfiguration({
     setError(null);
 
     try {
-      // ---------------------------------------------
-      // DEVICE NAME
-      // ---------------------------------------------
-
       if (
         !config.deviceName.trim()
       ) {
@@ -470,10 +497,6 @@ export default function DeviceConfiguration({
           "Device name is required"
         );
       }
-
-      // ---------------------------------------------
-      // INTERVAL VALUE
-      // ---------------------------------------------
 
       if (
         !Number.isFinite(
@@ -486,19 +509,11 @@ export default function DeviceConfiguration({
         );
       }
 
-      // ---------------------------------------------
-      // CONVERT TO MILLISECONDS
-      // ---------------------------------------------
-
       const sendInterval =
         intervalToMilliseconds(
           intervalValue,
           intervalUnit
         );
-
-      // ---------------------------------------------
-      // MINIMUM 1 SECOND
-      // ---------------------------------------------
 
       if (
         sendInterval <
@@ -523,10 +538,6 @@ export default function DeviceConfiguration({
         }
       );
 
-      // ---------------------------------------------
-      // SAVE API
-      // ---------------------------------------------
-
       const response =
         await fetch(
           `/api/devices/${encodeURIComponent(
@@ -544,8 +555,6 @@ export default function DeviceConfiguration({
               deviceName:
                 config.deviceName.trim(),
 
-              // IMPORTANT:
-              // Backend receives milliseconds.
               sendInterval,
 
               sensors:
@@ -578,10 +587,6 @@ export default function DeviceConfiguration({
         );
       }
 
-      // ---------------------------------------------
-      // UPDATE LOCAL CONFIG
-      // ---------------------------------------------
-
       setConfig({
         deviceId:
           result.deviceId,
@@ -595,10 +600,6 @@ export default function DeviceConfiguration({
         sensors:
           result.sensors ?? [],
       });
-
-      // ---------------------------------------------
-      // Make sure UI reflects server value
-      // ---------------------------------------------
 
       const savedInterval =
         millisecondsToInterval(
@@ -633,24 +634,91 @@ export default function DeviceConfiguration({
   }
 
   // ===================================================
+  // ACTIVE SENSOR COUNT
+  // ===================================================
+
+  const activeSensors =
+    useMemo(() => {
+      if (!config) {
+        return 0;
+      }
+
+      return config.sensors.filter(
+        (sensor) =>
+          sensor.type !==
+            "N/A" &&
+          sensor.type.trim() !== ""
+      ).length;
+    }, [config]);
+
+  // ===================================================
   // LOADING
   // ===================================================
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Device Configuration
-          </CardTitle>
-        </CardHeader>
+      <div className="space-y-6">
+        <Card
+          className="
+            rounded-3xl
+            border-slate-200
+            bg-white
+            shadow-sm
+          "
+        >
+          <CardContent
+            className="
+              flex
+              min-h-[420px]
+              flex-col
+              items-center
+              justify-center
+            "
+          >
+            <div
+              className="
+                flex
+                h-14
+                w-14
+                items-center
+                justify-center
+                rounded-2xl
+                bg-primary/10
+              "
+            >
+              <Settings2
+                className="
+                  h-6
+                  w-6
+                  animate-pulse
+                  text-primary
+                "
+              />
+            </div>
 
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Loading configuration...
-          </p>
-        </CardContent>
-      </Card>
+            <p
+              className="
+                mt-5
+                text-sm
+                font-semibold
+                text-slate-700
+              "
+            >
+              Loading configuration...
+            </p>
+
+            <p
+              className="
+                mt-1
+                text-xs
+                text-slate-400
+              "
+            >
+              Connecting to device
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -660,17 +728,65 @@ export default function DeviceConfiguration({
 
   if (error && !config) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Device Configuration
-          </CardTitle>
-        </CardHeader>
+      <Card
+        className="
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardContent className="p-6">
+          <div
+            className="
+              rounded-2xl
+              border
+              border-red-200
+              bg-red-50
+              p-5
+            "
+          >
+            <p
+              className="
+                text-sm
+                font-semibold
+                text-red-700
+              "
+            >
+              Unable to load configuration
+            </p>
 
-        <CardContent>
-          <p className="text-sm text-destructive">
-            {error}
-          </p>
+            <p
+              className="
+                mt-1
+                text-xs
+                text-red-600
+              "
+            >
+              {error}
+            </p>
+
+            <button
+              type="button"
+              onClick={
+                loadConfig
+              }
+              className="
+                mt-4
+                rounded-lg
+                bg-red-600
+                px-3
+                py-2
+                text-xs
+                font-semibold
+                text-white
+                transition
+                hover:bg-red-700
+              "
+            >
+              Try Again
+            </button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -685,27 +801,263 @@ export default function DeviceConfiguration({
   // ===================================================
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          Device Configuration
-        </CardTitle>
-      </CardHeader>
+    <div className="space-y-6">
+      {/* ================================================= */}
+      {/* HEADER */}
+      {/* ================================================= */}
 
-      <CardContent className="space-y-8">
+      <div
+        className="
+          flex
+          flex-col
+          gap-4
+          lg:flex-row
+          lg:items-center
+          lg:justify-between
+        "
+      >
+        <div>
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                items-center
+                justify-center
+                rounded-2xl
+                bg-primary/10
+              "
+            >
+              <Settings2
+                className="
+                  h-5
+                  w-5
+                  text-primary
+                "
+              />
+            </div>
 
-        {/* ========================================== */}
-        {/* BASIC CONFIGURATION */}
-        {/* ========================================== */}
+            <div>
+              <h1
+                className="
+                  text-2xl
+                  font-bold
+                  tracking-tight
+                  text-slate-900
+                "
+              >
+                Device Configuration
+              </h1>
 
-        <div className="grid gap-6 md:grid-cols-2">
+              <p
+                className="
+                  mt-0.5
+                  font-mono
+                  text-xs
+                  text-slate-400
+                "
+              >
+                {config.deviceId}
+              </p>
+            </div>
+          </div>
+        </div>
 
+        {/* SAVE */}
+
+        <button
+          type="button"
+          onClick={
+            saveConfig
+          }
+          disabled={saving}
+          className="
+            inline-flex
+            h-11
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            bg-primary
+            px-5
+            text-sm
+            font-semibold
+            text-primary-foreground
+            shadow-md
+            shadow-primary/20
+            transition-all
+            hover:-translate-y-0.5
+            hover:shadow-lg
+            hover:shadow-primary/25
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
+        >
+          {saving ? (
+            <>
+              <Loader2
+                className="
+                  h-4
+                  w-4
+                  animate-spin
+                "
+              />
+
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save
+                className="
+                  h-4
+                  w-4
+                "
+              />
+
+              Save Configuration
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* ================================================= */}
+      {/* DEVICE OVERVIEW */}
+      {/* ================================================= */}
+
+      <div
+        className="
+          grid
+          gap-4
+          md:grid-cols-3
+        "
+      >
+        <OverviewCard
+          icon={Cpu}
+          label="Device"
+          value={
+            config.deviceName ||
+            config.deviceId
+          }
+          subtitle={
+            config.deviceId
+          }
+        />
+
+        <OverviewCard
+          icon={Clock3}
+          label="Telemetry Interval"
+          value={formatIntervalPreview(
+            intervalValue,
+            intervalUnit
+          )}
+          subtitle="Current setting"
+        />
+
+        <OverviewCard
+          icon={Activity}
+          label="Active Sensors"
+          value={`${activeSensors}`}
+          subtitle={`of ${config.sensors.length} slots configured`}
+        />
+      </div>
+
+      {/* ================================================= */}
+      {/* BASIC SETTINGS */}
+      {/* ================================================= */}
+
+      <Card
+        className="
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardHeader
+          className="
+            border-b
+            border-slate-100
+            px-6
+            py-5
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+                rounded-xl
+                bg-primary/10
+              "
+            >
+              <Settings2
+                className="
+                  h-4
+                  w-4
+                  text-primary
+                "
+              />
+            </div>
+
+            <div>
+              <CardTitle
+                className="
+                  text-base
+                  font-bold
+                  text-slate-900
+                "
+              >
+                Basic Settings
+              </CardTitle>
+
+              <p
+                className="
+                  mt-0.5
+                  text-xs
+                  text-slate-400
+                "
+              >
+                Configure the device identity
+                and telemetry frequency.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent
+          className="
+            grid
+            gap-6
+            p-6
+            md:grid-cols-2
+          "
+        >
           {/* DEVICE NAME */}
 
           <div className="space-y-2">
             <label
               htmlFor="deviceName"
-              className="text-sm font-medium"
+              className="
+                text-xs
+                font-semibold
+                text-slate-700
+              "
             >
               Device Name
             </label>
@@ -721,7 +1073,24 @@ export default function DeviceConfiguration({
                   event.target.value
                 )
               }
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="
+                h-11
+                w-full
+                rounded-xl
+                border
+                border-slate-200
+                bg-slate-50
+                px-4
+                text-sm
+                text-slate-800
+                outline-none
+                transition-all
+                placeholder:text-slate-400
+                focus:border-primary
+                focus:bg-white
+                focus:ring-4
+                focus:ring-primary/10
+              "
               placeholder="Device name"
             />
           </div>
@@ -731,15 +1100,21 @@ export default function DeviceConfiguration({
           <div className="space-y-2">
             <label
               htmlFor="sendIntervalValue"
-              className="text-sm font-medium"
+              className="
+                text-xs
+                font-semibold
+                text-slate-700
+              "
             >
-              Send Interval
+              Telemetry Send Interval
             </label>
 
-            <div className="flex gap-2">
-
-              {/* VALUE */}
-
+            <div
+              className="
+                flex
+                gap-2
+              "
+            >
               <input
                 id="sendIntervalValue"
                 type="number"
@@ -755,11 +1130,25 @@ export default function DeviceConfiguration({
                     event.target.value
                   )
                 }
-                className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
-                placeholder="10"
+                className="
+                  h-11
+                  min-w-0
+                  flex-1
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-4
+                  text-sm
+                  text-slate-800
+                  outline-none
+                  transition-all
+                  focus:border-primary
+                  focus:bg-white
+                  focus:ring-4
+                  focus:ring-primary/10
+                "
               />
-
-              {/* UNIT */}
 
               <select
                 value={
@@ -773,7 +1162,23 @@ export default function DeviceConfiguration({
                       .value as IntervalUnit
                   )
                 }
-                className="w-32 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                className="
+                  h-11
+                  w-32
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-3
+                  text-sm
+                  text-slate-700
+                  outline-none
+                  transition-all
+                  focus:border-primary
+                  focus:bg-white
+                  focus:ring-4
+                  focus:ring-primary/10
+                "
               >
                 <option value="seconds">
                   Seconds
@@ -789,209 +1194,840 @@ export default function DeviceConfiguration({
               </select>
             </div>
 
-            <p className="text-xs text-muted-foreground">
-              Device will send telemetry every{" "}
-              <span className="font-medium text-foreground">
+            <div
+              className="
+                flex
+                items-center
+                gap-2
+                text-xs
+                text-slate-400
+              "
+            >
+              <Clock3
+                className="
+                  h-3.5
+                  w-3.5
+                "
+              />
+
+              Device will send telemetry
+              every{" "}
+              <span
+                className="
+                  font-semibold
+                  text-slate-600
+                "
+              >
                 {formatIntervalPreview(
                   intervalValue,
                   intervalUnit
                 )}
               </span>
-            </p>
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* ========================================== */}
-        {/* SENSOR CONFIGURATION */}
-        {/* ========================================== */}
+      {/* ================================================= */}
+      {/* SENSORS */}
+      {/* ================================================= */}
 
-        <div>
-          <div className="mb-4">
-            <h3 className="font-semibold">
-              Sensors
-            </h3>
+      <Card
+        className="
+          overflow-hidden
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardHeader
+          className="
+            border-b
+            border-slate-100
+            px-6
+            py-5
+          "
+        >
+          <div
+            className="
+              flex
+              flex-col
+              gap-3
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-3
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-9
+                  w-9
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-emerald-50
+                "
+              >
+                <Activity
+                  className="
+                    h-4
+                    w-4
+                    text-emerald-600
+                  "
+                />
+              </div>
 
-            <p className="text-sm text-muted-foreground">
-              Configure the sensors connected
-              to this device.
-            </p>
+              <div>
+                <CardTitle
+                  className="
+                    text-base
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  Sensors
+                </CardTitle>
+
+                <p
+                  className="
+                    mt-0.5
+                    text-xs
+                    text-slate-400
+                  "
+                >
+                  Configure sensors connected
+                  to this ESP32.
+                </p>
+              </div>
+            </div>
+
+            <span
+              className="
+                inline-flex
+                w-fit
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-slate-200
+                bg-slate-50
+                px-3
+                py-1.5
+                text-[10px]
+                font-semibold
+                text-slate-500
+              "
+            >
+              <span
+                className="
+                  h-1.5
+                  w-1.5
+                  rounded-full
+                  bg-emerald-500
+                "
+              />
+
+              {activeSensors} active
+            </span>
           </div>
+        </CardHeader>
 
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[800px] text-sm">
+        <CardContent className="p-0">
+          {/* DESKTOP TABLE */}
 
+          <div className="overflow-x-auto">
+            <table
+              className="
+                w-full
+                min-w-[800px]
+                text-sm
+              "
+            >
               <thead>
-                <tr className="border-b bg-muted/50">
-
-                  <th className="px-4 py-3 text-left font-medium">
+                <tr
+                  className="
+                    border-b
+                    border-slate-100
+                    bg-slate-50/70
+                  "
+                >
+                  <th
+                    className="
+                      px-5
+                      py-3
+                      text-left
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
                     Slot
                   </th>
 
-                  <th className="px-4 py-3 text-left font-medium">
-                    Type
+                  <th
+                    className="
+                      px-5
+                      py-3
+                      text-left
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
+                    Sensor Type
                   </th>
 
-                  <th className="px-4 py-3 text-left font-medium">
+                  <th
+                    className="
+                      px-5
+                      py-3
+                      text-left
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
                     Name
                   </th>
 
-                  <th className="px-4 py-3 text-left font-medium">
+                  <th
+                    className="
+                      px-5
+                      py-3
+                      text-left
+                      text-[10px]
+                      font-bold
+                      uppercase
+                      tracking-wider
+                      text-slate-400
+                    "
+                  >
                     Unit
                   </th>
-
                 </tr>
               </thead>
 
               <tbody>
                 {config.sensors.map(
-                  (sensor) => (
-                    <tr
-                      key={
-                        sensor.slot
-                      }
-                      className="border-b last:border-0"
-                    >
+                  (sensor) => {
+                    const SensorIcon =
+                      getSensorIcon(
+                        sensor.type
+                      );
 
-                      {/* SLOT */}
+                    const active =
+                      sensor.type !==
+                        "N/A" &&
+                      sensor.type.trim() !==
+                        "";
 
-                      <td className="px-4 py-3">
-                        <div className="flex h-9 w-12 items-center justify-center rounded-md bg-muted font-medium">
-                          {
-                            sensor.slot
-                          }
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={
+                          sensor.slot
+                        }
+                        className="
+                          border-b
+                          border-slate-100
+                          transition-colors
+                          last:border-0
+                          hover:bg-slate-50/60
+                        "
+                      >
+                        {/* SLOT */}
 
-                      {/* TYPE */}
-
-                      <td className="px-4 py-3">
-                        <select
-                          value={
-                            sensor.type
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateSensor(
-                              sensor.slot,
-                              "type",
-                              event.target
-                                .value
-                            )
-                          }
-                          className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
+                        <td
+                          className="
+                            px-5
+                            py-4
+                          "
                         >
-                          {SENSOR_TYPES.map(
-                            (type) => (
-                              <option
-                                key={
-                                  type
+                          <div
+                            className="
+                              flex
+                              items-center
+                              gap-2
+                            "
+                          >
+                            <div
+                              className="
+                                flex
+                                h-9
+                                w-9
+                                items-center
+                                justify-center
+                                rounded-xl
+                                bg-slate-100
+                                font-bold
+                                text-slate-600
+                              "
+                            >
+                              {sensor.slot}
+                            </div>
+
+                            {active && (
+                              <span
+                                className="
+                                  h-1.5
+                                  w-1.5
+                                  rounded-full
+                                  bg-emerald-500
+                                "
+                              />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* TYPE */}
+
+                        <td
+                          className="
+                            px-5
+                            py-4
+                          "
+                        >
+                          <div
+                            className="
+                              flex
+                              items-center
+                              gap-3
+                            "
+                          >
+                            <div
+                              className={`
+                                flex
+                                h-9
+                                w-9
+                                items-center
+                                justify-center
+                                rounded-xl
+                                ${
+                                  active
+                                    ? "bg-primary/10"
+                                    : "bg-slate-100"
                                 }
-                                value={
+                              `}
+                            >
+                              <SensorIcon
+                                className={`
+                                  h-4
+                                  w-4
+                                  ${
+                                    active
+                                      ? "text-primary"
+                                      : "text-slate-400"
+                                  }
+                                `}
+                              />
+                            </div>
+
+                            <select
+                              value={
+                                sensor.type
+                              }
+                              onChange={(
+                                event
+                              ) =>
+                                updateSensor(
+                                  sensor.slot,
+                                  "type",
+                                  event
+                                    .target
+                                    .value
+                                )
+                              }
+                              className="
+                                h-10
+                                min-w-[220px]
+                                rounded-xl
+                                border
+                                border-slate-200
+                                bg-white
+                                px-3
+                                text-xs
+                                font-medium
+                                text-slate-700
+                                outline-none
+                                transition-all
+                                focus:border-primary
+                                focus:ring-4
+                                focus:ring-primary/10
+                              "
+                            >
+                              {SENSOR_TYPES.map(
+                                (
                                   type
-                                }
-                              >
-                                {
-                                  type
-                                }
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </td>
+                                ) => (
+                                  <option
+                                    key={
+                                      type
+                                    }
+                                    value={
+                                      type
+                                    }
+                                  >
+                                    {type}
+                                  </option>
+                                )
+                              )}
+                            </select>
+                          </div>
+                        </td>
 
-                      {/* NAME */}
+                        {/* NAME */}
 
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={
-                            sensor.name
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateSensor(
-                              sensor.slot,
-                              "name",
-                              event.target
-                                .value
-                            )
-                          }
-                          className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
-                          placeholder="Sensor name"
-                        />
-                      </td>
+                        <td
+                          className="
+                            px-5
+                            py-4
+                          "
+                        >
+                          <input
+                            type="text"
+                            value={
+                              sensor.name
+                            }
+                            onChange={(
+                              event
+                            ) =>
+                              updateSensor(
+                                sensor.slot,
+                                "name",
+                                event
+                                  .target
+                                  .value
+                              )
+                            }
+                            className="
+                              h-10
+                              w-full
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-white
+                              px-3
+                              text-xs
+                              text-slate-700
+                              outline-none
+                              transition-all
+                              placeholder:text-slate-400
+                              focus:border-primary
+                              focus:ring-4
+                              focus:ring-primary/10
+                            "
+                            placeholder="Sensor name"
+                          />
+                        </td>
 
-                      {/* UNIT */}
+                        {/* UNIT */}
 
-                      <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={
-                            sensor.unit
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            updateSensor(
-                              sensor.slot,
-                              "unit",
-                              event.target
-                                .value
-                            )
-                          }
-                          className="w-full rounded-md border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-primary"
-                          placeholder="°C"
-                        />
-                      </td>
-
-                    </tr>
-                  )
+                        <td
+                          className="
+                            px-5
+                            py-4
+                          "
+                        >
+                          <input
+                            type="text"
+                            value={
+                              sensor.unit
+                            }
+                            onChange={(
+                              event
+                            ) =>
+                              updateSensor(
+                                sensor.slot,
+                                "unit",
+                                event
+                                  .target
+                                  .value
+                              )
+                            }
+                            className="
+                              h-10
+                              w-full
+                              max-w-[140px]
+                              rounded-xl
+                              border
+                              border-slate-200
+                              bg-white
+                              px-3
+                              text-xs
+                              text-slate-700
+                              outline-none
+                              transition-all
+                              placeholder:text-slate-400
+                              focus:border-primary
+                              focus:ring-4
+                              focus:ring-primary/10
+                            "
+                            placeholder="°C"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  }
                 )}
               </tbody>
-
             </table>
           </div>
-        </div>
 
-        {/* ========================================== */}
-        {/* STATUS */}
-        {/* ========================================== */}
+          {/* SENSOR INFO */}
 
-        {message && (
-          <div className="rounded-md border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-            {message}
-          </div>
-        )}
-
-        {error && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {error}
-          </div>
-        )}
-
-        {/* ========================================== */}
-        {/* SAVE */}
-        {/* ========================================== */}
-
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={
-              saveConfig
-            }
-            disabled={
-              saving
-            }
-            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          <div
+            className="
+              flex
+              items-start
+              gap-3
+              border-t
+              border-slate-100
+              bg-slate-50/50
+              px-5
+              py-4
+            "
           >
-            {saving
-              ? "Saving..."
-              : "Save Configuration"}
-          </button>
+            <Info
+              className="
+                mt-0.5
+                h-4
+                w-4
+                shrink-0
+                text-slate-400
+              "
+            />
+
+            <p
+              className="
+                text-xs
+                leading-5
+                text-slate-400
+              "
+            >
+              Sensor configuration is sent
+              to the ESP32 together with the
+              telemetry interval. The device
+              continues using the configured
+              slots when reporting telemetry.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ================================================= */}
+      {/* STATUS MESSAGE */}
+      {/* ================================================= */}
+
+      {message && (
+        <div
+          className="
+            flex
+            items-center
+            gap-3
+            rounded-2xl
+            border
+            border-emerald-200
+            bg-emerald-50
+            px-5
+            py-4
+            text-sm
+            text-emerald-700
+          "
+        >
+          <div
+            className="
+              flex
+              h-8
+              w-8
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              bg-emerald-100
+            "
+          >
+            <Check
+              className="
+                h-4
+                w-4
+                text-emerald-600
+              "
+            />
+          </div>
+
+          <div>
+            <p className="font-semibold">
+              Saved successfully
+            </p>
+
+            <p className="mt-0.5 text-xs">
+              {message}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* ERROR MESSAGE */}
+      {/* ================================================= */}
+
+      {error && config && (
+        <div
+          className="
+            rounded-2xl
+            border
+            border-red-200
+            bg-red-50
+            px-5
+            py-4
+            text-sm
+            text-red-700
+          "
+        >
+          <p className="font-semibold">
+            Configuration error
+          </p>
+
+          <p className="mt-1 text-xs">
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* BOTTOM SAVE */}
+      {/* ================================================= */}
+
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          gap-4
+          rounded-2xl
+          border
+          border-slate-200
+          bg-white
+          p-4
+          shadow-sm
+        "
+      >
+        <div
+          className="
+            hidden
+            items-center
+            gap-3
+            sm:flex
+          "
+        >
+          <div
+            className="
+              flex
+              h-9
+              w-9
+              items-center
+              justify-center
+              rounded-xl
+              bg-primary/10
+            "
+          >
+            <Wifi
+              className="
+                h-4
+                w-4
+                text-primary
+              "
+            />
+          </div>
+
+          <div>
+            <p
+              className="
+                text-xs
+                font-semibold
+                text-slate-700
+              "
+            >
+              Configuration ready
+            </p>
+
+            <p
+              className="
+                text-[10px]
+                text-slate-400
+              "
+            >
+              Save changes to update the
+              device.
+            </p>
+          </div>
         </div>
 
+        <button
+          type="button"
+          onClick={
+            saveConfig
+          }
+          disabled={saving}
+          className="
+            ml-auto
+            inline-flex
+            h-11
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            bg-primary
+            px-6
+            text-sm
+            font-semibold
+            text-primary-foreground
+            shadow-md
+            shadow-primary/20
+            transition-all
+            hover:-translate-y-0.5
+            hover:shadow-lg
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
+        >
+          {saving ? (
+            <>
+              <Loader2
+                className="
+                  h-4
+                  w-4
+                  animate-spin
+                "
+              />
+
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save
+                className="
+                  h-4
+                  w-4
+                "
+              />
+
+              Save Configuration
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================
+// OVERVIEW CARD
+// =====================================================
+
+function OverviewCard({
+  icon: Icon,
+  label,
+  value,
+  subtitle,
+}: {
+  icon: typeof Cpu;
+  label: string;
+  value: string;
+  subtitle: string;
+}) {
+  return (
+    <Card
+      className="
+        rounded-2xl
+        border-slate-200
+        bg-white
+        shadow-sm
+        transition-all
+        duration-300
+        hover:-translate-y-0.5
+        hover:shadow-md
+      "
+    >
+      <CardContent
+        className="
+          flex
+          items-center
+          gap-4
+          p-5
+        "
+      >
+        <div
+          className="
+            flex
+            h-11
+            w-11
+            shrink-0
+            items-center
+            justify-center
+            rounded-xl
+            bg-primary/10
+          "
+        >
+          <Icon
+            className="
+              h-5
+              w-5
+              text-primary
+            "
+          />
+        </div>
+
+        <div className="min-w-0">
+          <p
+            className="
+              text-[10px]
+              font-bold
+              uppercase
+              tracking-wider
+              text-slate-400
+            "
+          >
+            {label}
+          </p>
+
+          <p
+            className="
+              mt-1
+              truncate
+              text-sm
+              font-bold
+              text-slate-800
+            "
+          >
+            {value}
+          </p>
+
+          <p
+            className="
+              mt-0.5
+              truncate
+              text-[10px]
+              text-slate-400
+            "
+          >
+            {subtitle}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

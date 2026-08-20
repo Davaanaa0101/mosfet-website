@@ -3,14 +3,28 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
 import {
+  Activity,
+  Cpu,
+  Gauge,
+  HardDrive,
+  MapPin,
+  MemoryStick,
+  Network,
+  Radio,
+  Thermometer,
+  Timer,
+  Wifi,
+  Zap,
+} from "lucide-react";
+
+import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 // =====================================================
@@ -25,25 +39,19 @@ interface TelemetryData {
   createdAt: string;
 
   temperature?: number | null;
-
   humidity?: number | null;
 
   voltage?: number | null;
-
   current?: number | null;
-
   power?: number | null;
-
   energy?: number | null;
 
   rssi?: number | null;
 
   freeHeap?: number | null;
-
   uptime?: number | null;
 
   wifiSSID?: string | null;
-
   ipAddress?: string | null;
 }
 
@@ -70,6 +78,65 @@ interface Props {
 }
 
 // =====================================================
+// TELEMETRY FRESHNESS
+// =====================================================
+
+function getTelemetryState(
+  createdAt: string
+): {
+  label: string;
+  dot: string;
+  badge: string;
+  isLive: boolean;
+} {
+  const timestamp =
+    new Date(createdAt).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return {
+      label: "Unknown",
+      dot: "bg-slate-400",
+      badge:
+        "border-slate-200 bg-slate-50 text-slate-600",
+      isLive: false,
+    };
+  }
+
+  const age =
+    Date.now() - timestamp;
+
+  // Less than 30 seconds
+  if (age <= 30_000) {
+    return {
+      label: "Live",
+      dot: "bg-emerald-500",
+      badge:
+        "border-emerald-200 bg-emerald-50 text-emerald-700",
+      isLive: true,
+    };
+  }
+
+  // Less than 2 minutes
+  if (age <= 120_000) {
+    return {
+      label: "Delayed",
+      dot: "bg-amber-500",
+      badge:
+        "border-amber-200 bg-amber-50 text-amber-700",
+      isLive: false,
+    };
+  }
+
+  return {
+    label: "Offline",
+    dot: "bg-red-500",
+    badge:
+      "border-red-200 bg-red-50 text-red-700",
+    isLive: false,
+  };
+}
+
+// =====================================================
 // COMPONENT
 // =====================================================
 
@@ -77,7 +144,9 @@ export default function DeviceStatusCard({
   deviceId,
 }: Props) {
   const [latest, setLatest] =
-    useState<TelemetryData | null>(null);
+    useState<TelemetryData | null>(
+      null
+    );
 
   const [loading, setLoading] =
     useState(true);
@@ -89,98 +158,85 @@ export default function DeviceStatusCard({
   // LOAD LATEST TELEMETRY
   // ===================================================
 
-  const loadTelemetry = useCallback(
-    async () => {
-      try {
-        const response = await fetch(
-          `/api/devices/${encodeURIComponent(
-            deviceId
-          )}/telemetry?limit=1`,
-          {
-            method: "GET",
+  const loadTelemetry =
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              `/api/devices/${encodeURIComponent(
+                deviceId
+              )}/telemetry?limit=1`,
+              {
+                method: "GET",
 
-            cache: "no-store",
+                cache: "no-store",
 
-            headers: {
-              Accept:
-                "application/json",
-            },
+                headers: {
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
+
+          const result =
+            (await response.json()) as
+              | TelemetryResponse
+              | {
+                  success?: false;
+                  error?: string;
+                };
+
+          if (!response.ok) {
+            throw new Error(
+              "error" in result &&
+              result.error
+                ? result.error
+                : `Failed to load telemetry (${response.status})`
+            );
           }
-        );
 
-        const result =
-          (await response.json()) as
-            | TelemetryResponse
-            | {
-                success?: false;
-                error?: string;
-              };
+          if (
+            !("success" in result) ||
+            !result.success
+          ) {
+            throw new Error(
+              "error" in result &&
+              result.error
+                ? result.error
+                : "Failed to load telemetry"
+            );
+          }
 
-        if (!response.ok) {
-          throw new Error(
-            "error" in result &&
-            result.error
-              ? result.error
-              : `Failed to load telemetry (${response.status})`
+          const telemetry =
+            result.data ?? [];
+
+          const newest =
+            telemetry.length > 0
+              ? telemetry[
+                  telemetry.length - 1
+                ]
+              : null;
+
+          setLatest(newest);
+          setError(null);
+        } catch (err) {
+          console.error(
+            "[DeviceStatusCard] telemetry error:",
+            err
           );
-        }
 
-        if (
-          !("success" in result) ||
-          !result.success
-        ) {
-          throw new Error(
-            "error" in result &&
-            result.error
-              ? result.error
-              : "Failed to load telemetry"
-          );
-        }
-
-        // -------------------------------------------
-        // GET NEWEST RECORD
-        // -------------------------------------------
-
-        const telemetry =
-          result.data ?? [];
-
-        const newest =
-          telemetry.length > 0
-            ? telemetry[
-                telemetry.length - 1
-              ]
-            : null;
-
-        // -------------------------------------------
-        // UPDATE STATE
-        // -------------------------------------------
-
-        setLatest(newest);
-
-        setError(null);
-      } catch (err) {
-        console.error(
-          "[DeviceStatusCard] telemetry error:",
-          err
-        );
-
-        // -------------------------------------------
-        // DON'T DESTROY PREVIOUS DATA
-        // -------------------------------------------
-
-        if (!latest) {
           setError(
             err instanceof Error
               ? err.message
               : "Failed to load telemetry"
           );
+        } finally {
+          setLoading(false);
         }
-      } finally {
-        setLoading(false);
-      }
-    },
-    [deviceId, latest]
-  );
+      },
+      [deviceId]
+    );
 
   // ===================================================
   // INITIAL LOAD + AUTO REFRESH
@@ -192,13 +248,34 @@ export default function DeviceStatusCard({
     const interval =
       setInterval(
         loadTelemetry,
-        10000
+        10_000
       );
 
     return () => {
       clearInterval(interval);
     };
   }, [loadTelemetry]);
+
+  // ===================================================
+  // TELEMETRY STATUS
+  // ===================================================
+
+  const telemetryStatus =
+    useMemo(() => {
+      if (!latest) {
+        return {
+          label: "Offline",
+          dot: "bg-slate-400",
+          badge:
+            "border-slate-200 bg-slate-50 text-slate-600",
+          isLive: false,
+        };
+      }
+
+      return getTelemetryState(
+        latest.createdAt
+      );
+    }, [latest]);
 
   // ===================================================
   // LOADING
@@ -209,42 +286,159 @@ export default function DeviceStatusCard({
     !latest
   ) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Live Status
-          </CardTitle>
-        </CardHeader>
+      <Card
+        className="
+          overflow-hidden
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <div className="p-6">
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                h-10
+                w-10
+                animate-pulse
+                rounded-xl
+                bg-slate-100
+              "
+            />
 
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Loading telemetry...
-          </p>
-        </CardContent>
+            <div className="space-y-2">
+              <div
+                className="
+                  h-4
+                  w-32
+                  animate-pulse
+                  rounded
+                  bg-slate-100
+                "
+              />
+
+              <div
+                className="
+                  h-3
+                  w-48
+                  animate-pulse
+                  rounded
+                  bg-slate-100
+                "
+              />
+            </div>
+          </div>
+
+          <div
+            className="
+              mt-6
+              grid
+              grid-cols-2
+              gap-3
+              md:grid-cols-3
+              lg:grid-cols-6
+            "
+          >
+            {Array.from({
+              length: 6,
+            }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="
+                    h-24
+                    animate-pulse
+                    rounded-2xl
+                    bg-slate-50
+                  "
+                />
+              )
+            )}
+          </div>
+        </div>
       </Card>
     );
   }
 
   // ===================================================
-  // ERROR / NO DATA
+  // NO DATA
   // ===================================================
 
-  if (
-    !latest
-  ) {
+  if (!latest) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Live Status
-          </CardTitle>
-        </CardHeader>
+      <Card
+        className="
+          overflow-hidden
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardContent className="p-6">
+          <div
+            className="
+              flex
+              items-center
+              gap-4
+              rounded-2xl
+              border
+              border-slate-200
+              bg-slate-50
+              p-5
+            "
+          >
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                shrink-0
+                items-center
+                justify-center
+                rounded-xl
+                bg-slate-200
+              "
+            >
+              <Radio
+                className="
+                  h-5
+                  w-5
+                  text-slate-500
+                "
+              />
+            </div>
 
-        <CardContent>
-          <p className="text-sm text-destructive">
-            {error ||
-              "No telemetry available."}
-          </p>
+            <div>
+              <p
+                className="
+                  text-sm
+                  font-semibold
+                  text-slate-700
+                "
+              >
+                No telemetry available
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  text-xs
+                  text-slate-400
+                "
+              >
+                {error ||
+                  "This device has not sent telemetry yet."}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -255,23 +449,172 @@ export default function DeviceStatusCard({
   // ===================================================
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>
-          Live Status
-        </CardTitle>
+    <Card
+      className="
+        overflow-hidden
+        rounded-3xl
+        border-slate-200
+        bg-white
+        shadow-sm
+      "
+    >
+      {/* ================================================= */}
+      {/* HEADER */}
+      {/* ================================================= */}
 
-        <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
-          Online
-        </span>
-      </CardHeader>
+      <div
+        className="
+          relative
+          overflow-hidden
+          border-b
+          border-slate-100
+          p-5
+          sm:p-6
+        "
+      >
+        {/* Background glow */}
 
-      <CardContent>
-        {/* ----------------------------------------- */}
+        <div
+          className="
+            pointer-events-none
+            absolute
+            -right-20
+            -top-24
+            h-56
+            w-56
+            rounded-full
+            bg-primary/5
+            blur-3xl
+          "
+        />
+
+        <div
+          className="
+            relative
+            flex
+            flex-col
+            gap-4
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+          "
+        >
+          {/* TITLE */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            <div
+              className="
+                flex
+                h-11
+                w-11
+                items-center
+                justify-center
+                rounded-xl
+                bg-primary/10
+              "
+            >
+              <Activity
+                className="
+                  h-5
+                  w-5
+                  text-primary
+                "
+              />
+            </div>
+
+            <div>
+              <h2
+                className="
+                  text-base
+                  font-bold
+                  text-slate-900
+                "
+              >
+                Live Telemetry
+              </h2>
+
+              <p
+                className="
+                  mt-0.5
+                  font-mono
+                  text-[10px]
+                  text-slate-400
+                "
+              >
+                {deviceId}
+              </p>
+            </div>
+          </div>
+
+          {/* STATUS */}
+
+          <div
+            className={`
+              inline-flex
+              w-fit
+              items-center
+              gap-2
+              rounded-full
+              border
+              px-3
+              py-1.5
+              text-[11px]
+              font-bold
+              ${telemetryStatus.badge}
+            `}
+          >
+            <span className="relative flex h-2 w-2">
+              {telemetryStatus.isLive && (
+                <span
+                  className={`
+                    absolute
+                    inline-flex
+                    h-full
+                    w-full
+                    animate-ping
+                    rounded-full
+                    opacity-50
+                    ${telemetryStatus.dot}
+                  `}
+                />
+              )}
+
+              <span
+                className={`
+                  relative
+                  h-2
+                  w-2
+                  rounded-full
+                  ${telemetryStatus.dot}
+                `}
+              />
+            </span>
+
+            {telemetryStatus.label}
+          </div>
+        </div>
+      </div>
+
+      <CardContent className="p-5 sm:p-6">
+        {/* ================================================= */}
         {/* MAIN METRICS */}
-        {/* ----------------------------------------- */}
+        {/* ================================================= */}
 
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div
+          className="
+            grid
+            grid-cols-2
+            gap-3
+            md:grid-cols-3
+            lg:grid-cols-6
+          "
+        >
           <Metric
             title="Temperature"
             value={formatNumber(
@@ -279,6 +622,8 @@ export default function DeviceStatusCard({
               "°C",
               1
             )}
+            icon={Thermometer}
+            accent="orange"
           />
 
           <Metric
@@ -288,6 +633,8 @@ export default function DeviceStatusCard({
               "%",
               1
             )}
+            icon={Activity}
+            accent="blue"
           />
 
           <Metric
@@ -297,6 +644,8 @@ export default function DeviceStatusCard({
               "A",
               2
             )}
+            icon={Zap}
+            accent="yellow"
           />
 
           <Metric
@@ -306,6 +655,8 @@ export default function DeviceStatusCard({
               "V",
               1
             )}
+            icon={Activity}
+            accent="purple"
           />
 
           <Metric
@@ -315,6 +666,8 @@ export default function DeviceStatusCard({
               "W",
               1
             )}
+            icon={Gauge}
+            accent="emerald"
           />
 
           <Metric
@@ -324,68 +677,142 @@ export default function DeviceStatusCard({
                 ? `${latest.rssi} dBm`
                 : "--"
             }
+            icon={Wifi}
+            accent="cyan"
           />
         </div>
 
-        {/* ----------------------------------------- */}
+        {/* ================================================= */}
         {/* SYSTEM INFORMATION */}
-        {/* ----------------------------------------- */}
+        {/* ================================================= */}
 
-        <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
-          <Metric
-            title="Free Heap"
-            value={
-              latest.freeHeap != null
-                ? `${(
-                    latest.freeHeap /
-                    1024
-                  ).toFixed(1)} KB`
-                : "--"
-            }
-          />
+        <div className="mt-6">
+          <div
+            className="
+              mb-3
+              flex
+              items-center
+              gap-2
+            "
+          >
+            <Cpu
+              className="
+                h-4
+                w-4
+                text-slate-400
+              "
+            />
 
-          <Metric
-            title="Uptime"
-            value={
-              latest.uptime != null
-                ? formatUptime(
-                    latest.uptime
-                  )
-                : "--"
-            }
-          />
+            <p
+              className="
+                text-[10px]
+                font-bold
+                uppercase
+                tracking-widest
+                text-slate-400
+              "
+            >
+              System Information
+            </p>
+          </div>
 
-          <Metric
-            title="Wi-Fi"
-            value={
-              latest.wifiSSID ||
-              "--"
-            }
-          />
+          <div
+            className="
+              grid
+              grid-cols-2
+              gap-3
+              md:grid-cols-4
+            "
+          >
+            <SystemMetric
+              title="Free Heap"
+              value={
+                latest.freeHeap !=
+                null
+                  ? `${(
+                      latest.freeHeap /
+                      1024
+                    ).toFixed(1)} KB`
+                  : "--"
+              }
+              icon={MemoryStick}
+            />
 
-          <Metric
-            title="IP Address"
-            value={
-              latest.ipAddress ||
-              "--"
-            }
-          />
+            <SystemMetric
+              title="Uptime"
+              value={
+                latest.uptime !=
+                null
+                  ? formatUptime(
+                      latest.uptime
+                    )
+                  : "--"
+              }
+              icon={Timer}
+            />
+
+            <SystemMetric
+              title="Wi-Fi"
+              value={
+                latest.wifiSSID ||
+                "--"
+              }
+              icon={Wifi}
+            />
+
+            <SystemMetric
+              title="IP Address"
+              value={
+                latest.ipAddress ||
+                "--"
+              }
+              icon={Network}
+              mono
+            />
+          </div>
         </div>
 
-        {/* ----------------------------------------- */}
-        {/* LAST UPDATE */}
-        {/* ----------------------------------------- */}
+        {/* ================================================= */}
+        {/* FOOTER */}
+        {/* ================================================= */}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div
+          className="
+            mt-5
+            flex
+            flex-col
+            gap-2
+            border-t
+            border-slate-100
+            pt-4
+            text-[10px]
+            text-slate-400
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
+          "
+        >
           <span>
             Last telemetry:{" "}
-            {formatDate(
-              latest.createdAt
-            )}
+            <span
+              className="
+                font-medium
+                text-slate-500
+              "
+            >
+              {formatDate(
+                latest.createdAt
+              )}
+            </span>
           </span>
 
           {error && (
-            <span className="text-yellow-600">
+            <span
+              className="
+                font-medium
+                text-amber-600
+              "
+            >
               Temporary connection issue
             </span>
           )}
@@ -402,18 +829,184 @@ export default function DeviceStatusCard({
 function Metric({
   title,
   value,
+  icon: Icon,
+  accent,
 }: {
   title: string;
   value: string;
+  icon: typeof Activity;
+  accent:
+    | "orange"
+    | "blue"
+    | "yellow"
+    | "purple"
+    | "emerald"
+    | "cyan";
 }) {
+  const accentClasses = {
+    orange:
+      "bg-orange-50 text-orange-500",
+    blue:
+      "bg-blue-50 text-blue-500",
+    yellow:
+      "bg-yellow-50 text-yellow-500",
+    purple:
+      "bg-purple-50 text-purple-500",
+    emerald:
+      "bg-emerald-50 text-emerald-500",
+    cyan:
+      "bg-cyan-50 text-cyan-500",
+  };
+
   return (
-    <div className="rounded-lg border p-4">
-      <div className="text-sm text-muted-foreground">
-        {title}
+    <div
+      className="
+        group
+        rounded-2xl
+        border
+        border-slate-100
+        bg-white
+        p-4
+        transition-all
+        duration-200
+        hover:-translate-y-0.5
+        hover:border-slate-200
+        hover:shadow-sm
+      "
+    >
+      <div
+        className="
+          flex
+          items-center
+          justify-between
+          gap-2
+        "
+      >
+        <p
+          className="
+            text-[10px]
+            font-semibold
+            text-slate-400
+          "
+        >
+          {title}
+        </p>
+
+        <div
+          className={`
+            flex
+            h-7
+            w-7
+            items-center
+            justify-center
+            rounded-lg
+            ${accentClasses[accent]}
+          `}
+        >
+          <Icon
+            className="
+              h-3.5
+              w-3.5
+            "
+          />
+        </div>
       </div>
 
-      <div className="mt-1 break-words text-xl font-semibold">
+      <p
+        className="
+          mt-3
+          truncate
+          text-lg
+          font-bold
+          tracking-tight
+          text-slate-800
+        "
+      >
         {value}
+      </p>
+    </div>
+  );
+}
+
+// =====================================================
+// SYSTEM METRIC
+// =====================================================
+
+function SystemMetric({
+  title,
+  value,
+  icon: Icon,
+  mono = false,
+}: {
+  title: string;
+  value: string;
+  icon: typeof Cpu;
+  mono?: boolean;
+}) {
+  return (
+    <div
+      className="
+        flex
+        min-w-0
+        items-center
+        gap-3
+        rounded-xl
+        bg-slate-50
+        px-3
+        py-3
+      "
+    >
+      <div
+        className="
+          flex
+          h-8
+          w-8
+          shrink-0
+          items-center
+          justify-center
+          rounded-lg
+          bg-white
+          shadow-sm
+        "
+      >
+        <Icon
+          className="
+            h-3.5
+            w-3.5
+            text-slate-400
+          "
+        />
+      </div>
+
+      <div className="min-w-0">
+        <p
+          className="
+            text-[9px]
+            font-semibold
+            uppercase
+            tracking-wide
+            text-slate-400
+          "
+        >
+          {title}
+        </p>
+
+        <p
+          className={`
+            mt-0.5
+            truncate
+            text-xs
+            font-semibold
+            text-slate-600
+            ${
+              mono
+                ? "font-mono"
+                : ""
+            }
+          `}
+        >
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -465,18 +1058,21 @@ function formatUptime(
 
   const days =
     Math.floor(
-      totalSeconds / 86400
+      totalSeconds /
+        86400
     );
 
   const hours =
     Math.floor(
-      (totalSeconds % 86400) /
+      (totalSeconds %
+        86400) /
         3600
     );
 
   const minutes =
     Math.floor(
-      (totalSeconds % 3600) /
+      (totalSeconds %
+        3600) /
         60
     );
 
@@ -516,5 +1112,15 @@ function formatDate(
     return "--";
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString(
+    [],
+    {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }
+  );
 }
