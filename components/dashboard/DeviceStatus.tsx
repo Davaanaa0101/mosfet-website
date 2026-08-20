@@ -10,19 +10,115 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// =====================================================
+// DEVICE STATUS
+// =====================================================
+
+type DeviceStatusType =
+  | "NOT_REGISTERED"
+  | "REGISTERED"
+  | "RUNNING"
+  | "WARNING"
+  | "ERROR"
+  | "OFFLINE";
+
+// =====================================================
+// DEVICE
+// =====================================================
+
 interface DeviceItem {
+  _id?: string;
+
   deviceId: string;
+
+  serialId?: string;
+
   deviceName: string;
-  status: "online" | "offline";
+
+  status: DeviceStatusType;
+
   ipAddress?: string;
-  lastSeen?: string;
+
+  location?: string;
+
+  type?: string;
+
+  lastSeen?: string | null;
+
+  registeredAt?: string | null;
+
+  telemetry?: Record<string, unknown> | null;
 }
+
+// =====================================================
+// API RESPONSE
+// =====================================================
 
 interface DashboardResponse {
   success: boolean;
+
   devices?: DeviceItem[];
+
   error?: string;
 }
+
+// =====================================================
+// STATUS CONFIG
+// =====================================================
+
+const STATUS_CONFIG: Record<
+  DeviceStatusType,
+  {
+    label: string;
+    className: string;
+  }
+> = {
+  NOT_REGISTERED: {
+    label: "Not Registered",
+
+    className:
+      "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  },
+
+  REGISTERED: {
+    label: "Registered",
+
+    className:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400",
+  },
+
+  RUNNING: {
+    label: "Running",
+
+    className:
+      "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400",
+  },
+
+  WARNING: {
+    label: "Warning",
+
+    className:
+      "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400",
+  },
+
+  ERROR: {
+    label: "Error",
+
+    className:
+      "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+  },
+
+  OFFLINE: {
+    label: "Offline",
+
+    className:
+      "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
+  },
+};
+
+// =====================================================
+// COMPONENT
+// =====================================================
 
 export default function DeviceStatus() {
   const [devices, setDevices] =
@@ -34,8 +130,12 @@ export default function DeviceStatus() {
   const [error, setError] =
     useState<string | null>(null);
 
-  const loadDevices =
-    useCallback(async () => {
+  // =====================================================
+  // LOAD DEVICES
+  // =====================================================
+
+  const loadDevices = useCallback(
+    async () => {
       try {
         const response =
           await fetch(
@@ -48,7 +148,10 @@ export default function DeviceStatus() {
         const result =
           (await response.json()) as DashboardResponse;
 
-        if (!response.ok || !result.success) {
+        if (
+          !response.ok ||
+          !result.success
+        ) {
           throw new Error(
             result.error ||
               "Failed to load devices"
@@ -74,7 +177,13 @@ export default function DeviceStatus() {
       } finally {
         setLoading(false);
       }
-    }, []);
+    },
+    []
+  );
+
+  // =====================================================
+  // INITIAL LOAD + AUTO REFRESH
+  // =====================================================
 
   useEffect(() => {
     loadDevices();
@@ -82,7 +191,7 @@ export default function DeviceStatus() {
     const interval =
       setInterval(
         loadDevices,
-        10000
+        10_000
       );
 
     return () => {
@@ -91,6 +200,10 @@ export default function DeviceStatus() {
       );
     };
   }, [loadDevices]);
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <Card>
@@ -101,17 +214,30 @@ export default function DeviceStatus() {
       </CardHeader>
 
       <CardContent>
+        {/* ================================================
+            LOADING
+        ================================================= */}
+
         {loading && (
           <p className="text-sm text-muted-foreground">
             Loading devices...
           </p>
         )}
 
-        {!loading && error && (
-          <p className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
+        {/* ================================================
+            ERROR
+        ================================================= */}
+
+        {!loading &&
+          error && (
+            <p className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+        {/* ================================================
+            NO DEVICES
+        ================================================= */}
 
         {!loading &&
           !error &&
@@ -121,59 +247,102 @@ export default function DeviceStatus() {
             </p>
           )}
 
-        <div className="space-y-4">
-          {devices.map(
-            (device) => (
-              <Link
-                key={
-                  device.deviceId
-                }
-                href={`/devices/${encodeURIComponent(
-                  device.deviceId
-                )}`}
-                className="block"
-              >
-                <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
-                  <div>
-                    <p className="font-medium">
-                      {
-                        device.deviceName
-                      }
-                    </p>
+        {/* ================================================
+            DEVICE LIST
+        ================================================= */}
 
-                    <p className="text-sm text-muted-foreground">
-                      {
+        {!loading &&
+          !error &&
+          devices.length > 0 && (
+            <div className="space-y-4">
+              {devices.map(
+                (device) => {
+                  // ----------------------------------------
+                  // STATUS CONFIG
+                  // ----------------------------------------
+
+                  const status =
+                    STATUS_CONFIG[
+                      device.status
+                    ] ??
+                    STATUS_CONFIG.OFFLINE;
+
+                  // ----------------------------------------
+                  // RENDER
+                  // ----------------------------------------
+
+                  return (
+                    <Link
+                      key={
                         device.deviceId
                       }
-                    </p>
+                      href={`/devices/${encodeURIComponent(
+                        device.deviceId
+                      )}`}
+                      className="block"
+                    >
+                      <div className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
+                        {/* =================================
+                            DEVICE INFORMATION
+                        ================================== */}
 
-                    {device.ipAddress && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {
-                          device.ipAddress
-                        }
-                      </p>
-                    )}
-                  </div>
+                        <div>
+                          {/* DEVICE NAME */}
 
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      device.status ===
-                      "online"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-                    }`}
-                  >
-                    {device.status ===
-                    "online"
-                      ? "Online"
-                      : "Offline"}
-                  </span>
-                </div>
-              </Link>
-            )
+                          <p className="font-medium">
+                            {
+                              device.deviceName
+                            }
+                          </p>
+
+                          {/* DEVICE ID */}
+
+                          <p className="text-sm text-muted-foreground">
+                            {
+                              device.deviceId
+                            }
+                          </p>
+
+                          {/* SERIAL ID */}
+
+                          {device.serialId && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Serial:{" "}
+                              {
+                                device.serialId
+                              }
+                            </p>
+                          )}
+
+                          {/* IP ADDRESS */}
+
+                          {device.ipAddress && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {
+                                device.ipAddress
+                              }
+                            </p>
+                          )}
+                        </div>
+
+                        {/* =================================
+                            STATUS
+                        ================================== */}
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-medium ${status.className}`}
+                        >
+                          {
+                            status.label
+                          }
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                }
+              )}
+            </div>
           )}
-        </div>
       </CardContent>
     </Card>
   );
