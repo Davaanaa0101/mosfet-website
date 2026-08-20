@@ -20,13 +20,16 @@ import {
 } from "@/lib/auth-client";
 
 export default function Sidebar() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
 
   const [
     loggingOut,
     setLoggingOut,
   ] = useState(false);
+
+  // =====================================================
+  // LOGOUT
+  // =====================================================
 
   async function handleLogout() {
     try {
@@ -34,8 +37,7 @@ export default function Sidebar() {
 
       await signOut();
 
-      window.location.href =
-        "/login";
+      window.location.href = "/login";
     } catch (error) {
       console.error(
         "[Sidebar] Logout error:",
@@ -45,6 +47,10 @@ export default function Sidebar() {
       setLoggingOut(false);
     }
   }
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <aside
@@ -59,50 +65,112 @@ export default function Sidebar() {
         min-w-64
         flex-col
         border-r
-        bg-background
+        border-slate-200
+        bg-white
+        shadow-sm
       "
     >
-      {/* ======================================= */}
+      {/* ================================================= */}
       {/* LOGO */}
-      {/* ======================================= */}
+      {/* ================================================= */}
 
       <div
         className="
           flex
-          h-16
+          h-20
           shrink-0
           items-center
           border-b
-          px-6
+          border-slate-100
+          px-5
         "
       >
-        <h1
+        <Link
+          href="/dashboard"
           className="
-            text-xl
-            font-bold
+            flex
+            items-center
+            gap-3
           "
         >
-          MOSFET
-        </h1>
+          {/* Logo mark */}
+
+          <div
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              bg-primary
+              text-sm
+              font-black
+              text-primary-foreground
+              shadow-md
+              shadow-primary/20
+            "
+          >
+            M
+          </div>
+
+          {/* Logo text */}
+
+          <div>
+            <p
+              className="
+                text-lg
+                font-black
+                tracking-tight
+                text-slate-900
+              "
+            >
+              MOSFET
+            </p>
+
+            <p
+              className="
+                text-[9px]
+                font-semibold
+                uppercase
+                tracking-[0.18em]
+                text-slate-400
+              "
+            >
+              Smart Building
+            </p>
+          </div>
+        </Link>
       </div>
 
-      {/* ======================================= */}
+      {/* ================================================= */}
       {/* NAVIGATION */}
-      {/* ======================================= */}
+      {/* ================================================= */}
 
       <nav
         className="
           min-h-0
           flex-1
           overflow-y-auto
-          p-4
+          px-3
+          py-5
         "
       >
-        <div
+        <p
           className="
-            space-y-1
+            mb-3
+            px-3
+            text-[10px]
+            font-bold
+            uppercase
+            tracking-[0.18em]
+            text-slate-400
           "
         >
+          Main Menu
+        </p>
+
+        <div className="space-y-1">
           {sidebarItems.map(
             (item) => {
               const Icon =
@@ -125,41 +193,73 @@ export default function Sidebar() {
                   }
                   className={cn(
                     `
+                      group
+                      relative
                       flex
                       w-full
                       items-center
                       gap-3
-                      rounded-lg
+                      rounded-xl
                       px-3
-                      py-2.5
+                      py-3
                       text-sm
                       font-medium
-                      transition-colors
+                      transition-all
+                      duration-200
                     `,
                     isActive
                       ? `
                         bg-primary
                         text-primary-foreground
+                        shadow-md
+                        shadow-primary/20
                       `
                       : `
-                        text-muted-foreground
-                        hover:bg-muted
-                        hover:text-foreground
+                        text-slate-500
+                        hover:bg-slate-50
+                        hover:text-slate-900
                       `
                   )}
                 >
+                  {/* Active indicator */}
+
+                  {isActive && (
+                    <span
+                      className="
+                        absolute
+                        -left-3
+                        top-1/2
+                        h-6
+                        w-1
+                        -translate-y-1/2
+                        rounded-r-full
+                        bg-primary
+                      "
+                    />
+                  )}
+
+                  {/* Icon */}
+
                   <Icon
-                    className="
-                      h-5
-                      w-5
-                      shrink-0
-                    "
+                    className={cn(
+                      `
+                        h-5
+                        w-5
+                        shrink-0
+                        transition-transform
+                        duration-200
+                      `,
+                      !isActive &&
+                        `
+                          group-hover:scale-110
+                        `
+                    )}
                   />
 
-                  <span>
-                    {
-                      item.title
-                    }
+                  {/* Title */}
+
+                  <span className="truncate">
+                    {item.title}
                   </span>
                 </Link>
               );
@@ -168,18 +268,21 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* ======================================= */}
-      {/* LOGOUT - ALWAYS BOTTOM */}
-      {/* ======================================= */}
+      {/* ================================================= */}
+      {/* BOTTOM SECTION */}
+      {/* ================================================= */}
 
       <div
         className="
           shrink-0
           border-t
-          bg-background
-          p-4
+          border-slate-100
+          bg-white
+          p-3
         "
       >
+        {/* Logout */}
+
         <button
           type="button"
           onClick={
@@ -189,39 +292,60 @@ export default function Sidebar() {
             loggingOut
           }
           className="
+            group
             flex
             w-full
             items-center
             gap-3
-            rounded-lg
+            rounded-xl
             px-3
-            py-2.5
+            py-3
             text-sm
             font-medium
-            text-muted-foreground
-            transition-colors
-            hover:bg-muted
-            hover:text-foreground
+            text-slate-500
+            transition-all
+            duration-200
+            hover:bg-red-50
+            hover:text-red-600
             disabled:cursor-not-allowed
             disabled:opacity-50
           "
         >
-          {loggingOut ? (
-            <Loader2
-              className="
-                h-5
-                w-5
-                animate-spin
-              "
-            />
-          ) : (
-            <LogOut
-              className="
-                h-5
-                w-5
-              "
-            />
-          )}
+          {/* Icon */}
+
+          <div
+            className="
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-lg
+              bg-slate-100
+              transition-colors
+              group-hover:bg-red-100
+            "
+          >
+            {loggingOut ? (
+              <Loader2
+                className="
+                  h-4
+                  w-4
+                  animate-spin
+                "
+              />
+            ) : (
+              <LogOut
+                className="
+                  h-4
+                  w-4
+                "
+              />
+            )}
+          </div>
+
+          {/* Text */}
 
           <span>
             {loggingOut
@@ -229,6 +353,19 @@ export default function Sidebar() {
               : "Logout"}
           </span>
         </button>
+
+        {/* Footer label */}
+
+        <p
+          className="
+            mt-3
+            text-center
+            text-[9px]
+            text-slate-400
+          "
+        >
+          MOSFET Smart Building Platform
+        </p>
       </div>
     </aside>
   );
