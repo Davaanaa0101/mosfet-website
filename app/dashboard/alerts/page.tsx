@@ -11,19 +11,17 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  RefreshCw,
-  Thermometer,
   Droplets,
   Gauge,
-  Wifi,
+  RefreshCw,
   Server,
+  Thermometer,
+  Wifi,
 } from "lucide-react";
 
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 // =====================================================
@@ -50,47 +48,34 @@ type AlertType =
 
 interface AlertItem {
   _id: string;
-
   deviceId: string;
-
   deviceName?: string;
 
   type: AlertType;
 
   title: string;
-
   message: string;
 
   severity: AlertSeverity;
-
   status: AlertStatus;
 
   slot?: number;
-
   sensorType?: string;
-
   sensorName?: string;
 
   value?: number | null;
-
   threshold?: number | null;
-
   unit?: string;
 
   triggeredAt: string;
-
   resolvedAt?: string | null;
-
   createdAt?: string;
 }
 
 interface AlertsResponse {
   success: boolean;
-
   data?: AlertItem[];
-
   alerts?: AlertItem[];
-
   error?: string;
 }
 
@@ -211,9 +196,12 @@ export default function AlertsPage() {
 
   useEffect(() => {
     const interval =
-      setInterval(() => {
-        loadAlerts(false);
-      }, 10000);
+      setInterval(
+        () => {
+          loadAlerts(false);
+        },
+        10_000
+      );
 
     return () => {
       clearInterval(
@@ -256,10 +244,7 @@ export default function AlertsPage() {
           );
         })
         .sort(
-          (
-            a,
-            b
-          ) =>
+          (a, b) =>
             new Date(
               b.triggeredAt
             ).getTime() -
@@ -316,23 +301,40 @@ export default function AlertsPage() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold">
-            Alerts
-          </h1>
 
-          <p className="mt-1 text-muted-foreground">
-            Monitor sensor and device alerts.
-          </p>
+        <div>
+          <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200" />
+
+          <div className="mt-3 h-4 w-72 animate-pulse rounded bg-slate-100" />
         </div>
 
-        <Card>
-          <CardContent className="py-12">
-            <p className="text-center text-sm text-muted-foreground">
-              Loading alerts...
-            </p>
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({
+            length: 4,
+          }).map(
+            (_, index) => (
+              <div
+                key={index}
+                className="h-32 animate-pulse rounded-3xl bg-slate-100"
+              />
+            )
+          )}
+        </div>
+
+        <div className="h-20 animate-pulse rounded-3xl bg-slate-100" />
+
+        <div className="space-y-4">
+          {Array.from({
+            length: 3,
+          }).map(
+            (_, index) => (
+              <div
+                key={index}
+                className="h-40 animate-pulse rounded-3xl bg-slate-100"
+              />
+            )
+          )}
+        </div>
       </div>
     );
   }
@@ -343,19 +345,29 @@ export default function AlertsPage() {
 
   return (
     <div className="space-y-8">
-      {/* ============================================= */}
+
+      {/* ================================================= */}
       {/* HEADER */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+
         <div>
-          <h1 className="text-3xl font-bold">
-            Alerts
-          </h1>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+            </div>
 
-          <p className="mt-1 text-muted-foreground">
-            Monitor sensor and device conditions.
-          </p>
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+                Alerts
+              </h1>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Monitor sensor and device conditions.
+              </p>
+            </div>
+          </div>
         </div>
 
         <button
@@ -363,8 +375,31 @@ export default function AlertsPage() {
           onClick={() =>
             loadAlerts(false)
           }
-          disabled={refreshing}
-          className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+          disabled={
+            refreshing
+          }
+          className="
+            inline-flex
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            border
+            border-slate-200
+            bg-white
+            px-4
+            py-2.5
+            text-sm
+            font-semibold
+            text-slate-700
+            shadow-sm
+            transition-all
+            hover:border-primary/30
+            hover:bg-slate-50
+            hover:text-primary
+            disabled:cursor-not-allowed
+            disabled:opacity-50
+          "
         >
           <RefreshCw
             className={`h-4 w-4 ${
@@ -378,82 +413,142 @@ export default function AlertsPage() {
         </button>
       </div>
 
-      {/* ============================================= */}
+      {/* ================================================= */}
       {/* ERROR */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
+        <div
+          className="
+            flex
+            items-center
+            gap-3
+            rounded-2xl
+            border
+            border-red-200
+            bg-red-50
+            px-4
+            py-3
+          "
+        >
+          <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
+
+          <p className="text-sm font-medium text-red-700">
             {error}
           </p>
         </div>
       )}
 
-      {/* ============================================= */}
+      {/* ================================================= */}
       {/* SUMMARY */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
         <SummaryCard
           title="Active Alerts"
-          value={activeCount}
+          value={
+            activeCount
+          }
+          description="Currently active"
           icon={
             <AlertTriangle className="h-5 w-5" />
           }
-          description="Currently active"
+          iconClass="
+            bg-red-50
+            text-red-500
+          "
+          valueClass="text-red-600"
         />
 
         <SummaryCard
           title="Critical"
-          value={criticalCount}
+          value={
+            criticalCount
+          }
+          description="Immediate attention"
           icon={
             <AlertTriangle className="h-5 w-5" />
           }
-          description="Immediate attention"
+          iconClass="
+            bg-red-50
+            text-red-500
+          "
+          valueClass="text-red-600"
         />
 
         <SummaryCard
           title="Warnings"
-          value={warningCount}
+          value={
+            warningCount
+          }
+          description="Requires monitoring"
           icon={
             <Clock className="h-5 w-5" />
           }
-          description="Requires monitoring"
+          iconClass="
+            bg-amber-50
+            text-amber-500
+          "
+          valueClass="text-amber-600"
         />
 
         <SummaryCard
           title="Resolved"
-          value={resolvedCount}
+          value={
+            resolvedCount
+          }
+          description="Alert history"
           icon={
             <CheckCircle2 className="h-5 w-5" />
           }
-          description="Alert history"
+          iconClass="
+            bg-emerald-50
+            text-emerald-500
+          "
+          valueClass="text-emerald-600"
         />
+
       </div>
 
-      {/* ============================================= */}
-      {/* FILTERS */}
-      {/* ============================================= */}
+      {/* ================================================= */}
+      {/* FILTER BAR */}
+      {/* ================================================= */}
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <Card
+        className="
+          rounded-3xl
+          border-slate-200
+          bg-white
+          shadow-sm
+        "
+      >
+        <CardContent className="p-5">
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
             <div>
-              <p className="font-medium">
+              <p className="text-sm font-bold text-slate-800">
                 Alert History
               </p>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="mt-1 text-xs text-slate-400">
                 Showing{" "}
-                {
-                  filteredAlerts.length
-                }{" "}
-                alerts
+                <span className="font-semibold text-slate-600">
+                  {
+                    filteredAlerts.length
+                  }
+                </span>{" "}
+                alert
+                {filteredAlerts.length !==
+                1
+                  ? "s"
+                  : ""}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
+
               {/* STATUS */}
 
               <select
@@ -470,7 +565,22 @@ export default function AlertsPage() {
                       | AlertStatus
                   )
                 }
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  text-slate-700
+                  outline-none
+                  transition
+                  focus:border-primary
+                  focus:ring-2
+                  focus:ring-primary/10
+                "
               >
                 <option value="active">
                   Active
@@ -481,7 +591,7 @@ export default function AlertsPage() {
                 </option>
 
                 <option value="all">
-                  All
+                  All Status
                 </option>
               </select>
 
@@ -501,7 +611,22 @@ export default function AlertsPage() {
                       | AlertSeverity
                   )
                 }
-                className="rounded-md border bg-background px-3 py-2 text-sm"
+                className="
+                  rounded-xl
+                  border
+                  border-slate-200
+                  bg-slate-50
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  text-slate-700
+                  outline-none
+                  transition
+                  focus:border-primary
+                  focus:ring-2
+                  focus:ring-primary/10
+                "
               >
                 <option value="all">
                   All Severity
@@ -519,44 +644,72 @@ export default function AlertsPage() {
                   Info
                 </option>
               </select>
+
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ============================================= */}
+      {/* ================================================= */}
       {/* ALERT LIST */}
-      {/* ============================================= */}
+      {/* ================================================= */}
 
       {filteredAlerts.length ===
       0 ? (
-        <Card>
-          <CardContent className="py-16">
-            <div className="flex flex-col items-center justify-center text-center">
-              <CheckCircle2 className="mb-4 h-12 w-12 text-green-500" />
+        <Card
+          className="
+            rounded-3xl
+            border-slate-200
+            bg-white
+            shadow-sm
+          "
+        >
+          <CardContent className="py-20">
 
-              <h2 className="text-lg font-semibold">
+            <div className="flex flex-col items-center justify-center text-center">
+
+              <div
+                className="
+                  flex
+                  h-16
+                  w-16
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  bg-emerald-50
+                "
+              >
+                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+              </div>
+
+              <h2 className="mt-5 text-lg font-bold text-slate-800">
                 No alerts
               </h2>
 
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                There are no alerts matching the current filters.
+              <p className="mt-2 max-w-md text-sm text-slate-400">
+                There are no alerts matching
+                the current filters.
               </p>
+
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
+
           {filteredAlerts.map(
             (alert) => (
               <AlertCard
                 key={
                   alert._id
                 }
-                alert={alert}
+                alert={
+                  alert
+                }
               />
             )
           )}
+
         </div>
       )}
     </div>
@@ -572,36 +725,69 @@ function SummaryCard({
   value,
   description,
   icon,
+  iconClass,
+  valueClass,
 }: {
   title: string;
-
   value: number;
-
   description: string;
-
   icon: React.ReactNode;
+  iconClass: string;
+  valueClass: string;
 }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
+    <Card
+      className="
+        rounded-3xl
+        border-slate-200
+        bg-white
+        shadow-sm
+        transition-all
+        duration-300
+        hover:-translate-y-1
+        hover:shadow-md
+      "
+    >
+      <CardContent className="p-5">
+
+        <div className="flex items-start justify-between">
+
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
               {title}
             </p>
 
-            <p className="mt-1 text-3xl font-bold">
+            <p
+              className={`
+                mt-2
+                text-3xl
+                font-bold
+                tracking-tight
+                ${valueClass}
+              `}
+            >
               {value}
             </p>
 
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-slate-400">
               {description}
             </p>
           </div>
 
-          <div className="rounded-lg border p-3">
+          <div
+            className={`
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-xl
+              ${iconClass}
+            `}
+          >
             {icon}
           </div>
+
         </div>
       </CardContent>
     </Card>
@@ -622,37 +808,66 @@ function AlertCard({
       alert.type
     );
 
-  const severityClass =
+  const severity =
     getSeverityClass(
       alert.severity
     );
 
-  const statusClass =
+  const isActive =
     alert.status ===
-    "active"
-      ? "border-red-500/30"
-      : "border-green-500/30";
+    "active";
 
   return (
     <Card
-      className={`border ${statusClass}`}
+      className={`
+        overflow-hidden
+        rounded-3xl
+        bg-white
+        shadow-sm
+        transition-all
+        duration-300
+        hover:shadow-md
+        ${
+          isActive
+            ? "border-red-200"
+            : "border-emerald-200"
+        }
+      `}
     >
-      <CardContent className="p-5">
+      <CardContent className="p-5 sm:p-6">
+
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          {/* ========================================= */}
+
+          {/* ================================================= */}
           {/* LEFT */}
-          {/* ========================================= */}
+          {/* ================================================= */}
 
           <div className="flex min-w-0 gap-4">
+
+            {/* ICON */}
+
             <div
-              className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${severityClass}`}
+              className={`
+                flex
+                h-11
+                w-11
+                shrink-0
+                items-center
+                justify-center
+                rounded-2xl
+                ${severity}
+              `}
             >
               {icon}
             </div>
 
+            {/* CONTENT */}
+
             <div className="min-w-0">
+
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-semibold">
+
+                <h3 className="text-base font-bold text-slate-800">
                   {alert.title}
                 </h3>
 
@@ -667,27 +882,29 @@ function AlertCard({
                     alert.status
                   }
                 />
+
               </div>
 
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-2 text-sm leading-6 text-slate-500">
                 {alert.message}
               </p>
 
-              {/* DEVICE */}
+              {/* DEVICE INFO */}
 
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                <span>
-                  Device:{" "}
-                  <strong className="font-medium text-foreground">
+              <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+
+                <span className="text-slate-400">
+                  Device{" "}
+                  <strong className="font-semibold text-slate-700">
                     {alert.deviceName ||
                       alert.deviceId}
                   </strong>
                 </span>
 
                 {alert.sensorName && (
-                  <span>
-                    Sensor:{" "}
-                    <strong className="font-medium text-foreground">
+                  <span className="text-slate-400">
+                    Sensor{" "}
+                    <strong className="font-semibold text-slate-700">
                       {
                         alert.sensorName
                       }
@@ -697,74 +914,99 @@ function AlertCard({
 
                 {typeof alert.slot ===
                   "number" && (
-                  <span>
-                    Slot:{" "}
-                    <strong className="font-medium text-foreground">
+                  <span className="text-slate-400">
+                    Slot{" "}
+                    <strong className="font-semibold text-slate-700">
                       {
                         alert.slot
                       }
                     </strong>
                   </span>
                 )}
+
               </div>
             </div>
           </div>
 
-          {/* ========================================= */}
+          {/* ================================================= */}
           {/* RIGHT */}
-          {/* ========================================= */}
+          {/* ================================================= */}
 
-          <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+          <div
+            className="
+              flex
+              shrink-0
+              flex-row
+              items-center
+              justify-between
+              gap-6
+              border-t
+              border-slate-100
+              pt-4
+              lg:min-w-[230px]
+              lg:flex-col
+              lg:items-end
+              lg:border-t-0
+              lg:pt-0
+            "
+          >
+
             {/* VALUE */}
 
             {typeof alert.value ===
               "number" && (
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">
+              <div className="text-left lg:text-right">
+
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                   Current value
                 </p>
 
-                <p className="text-lg font-semibold">
+                <p className="mt-1 text-xl font-bold text-slate-800">
                   {formatNumber(
                     alert.value
                   )}{" "}
                   {alert.unit ||
                     ""}
                 </p>
+
+                {typeof alert.threshold ===
+                  "number" && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Limit{" "}
+                    <span className="font-semibold text-slate-600">
+                      {formatNumber(
+                        alert.threshold
+                      )}{" "}
+                      {alert.unit ||
+                        ""}
+                    </span>
+                  </p>
+                )}
+
               </div>
-            )}
-
-            {/* THRESHOLD */}
-
-            {typeof alert.threshold ===
-              "number" && (
-              <p className="text-xs text-muted-foreground">
-                Threshold:{" "}
-                <span className="font-medium text-foreground">
-                  {formatNumber(
-                    alert.threshold
-                  )}{" "}
-                  {alert.unit ||
-                    ""}
-                </span>
-              </p>
             )}
 
             {/* TIME */}
 
-            <p className="text-xs text-muted-foreground">
-              {alert.status ===
-              "resolved"
-                ? "Resolved"
-                : "Triggered"}{" "}
-              {formatDate(
-                alert.status ===
-                  "resolved" &&
-                  alert.resolvedAt
-                  ? alert.resolvedAt
-                  : alert.triggeredAt
-              )}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+
+              <Clock className="h-3.5 w-3.5" />
+
+              <span>
+                {alert.status ===
+                "resolved"
+                  ? "Resolved"
+                  : "Triggered"}{" "}
+                {formatDate(
+                  alert.status ===
+                    "resolved" &&
+                    alert.resolvedAt
+                    ? alert.resolvedAt
+                    : alert.triggeredAt
+                )}
+              </span>
+
+            </div>
           </div>
         </div>
       </CardContent>
@@ -784,15 +1026,25 @@ function SeverityBadge({
   const classes =
     severity ===
     "critical"
-      ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+      ? "bg-red-50 text-red-600 border-red-100"
       : severity ===
-        "warning"
-      ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400"
-      : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
+          "warning"
+        ? "bg-amber-50 text-amber-600 border-amber-100"
+        : "bg-blue-50 text-blue-600 border-blue-100";
 
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium ${classes}`}
+      className={`
+        rounded-full
+        border
+        px-2.5
+        py-1
+        text-[10px]
+        font-bold
+        uppercase
+        tracking-wide
+        ${classes}
+      `}
     >
       {capitalize(
         severity
@@ -810,14 +1062,43 @@ function StatusBadge({
 }: {
   status: AlertStatus;
 }) {
+  const active =
+    status === "active";
+
   return (
     <span
-      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-        status === "active"
-          ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-          : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
-      }`}
+      className={`
+        inline-flex
+        items-center
+        gap-1.5
+        rounded-full
+        border
+        px-2.5
+        py-1
+        text-[10px]
+        font-bold
+        uppercase
+        tracking-wide
+        ${
+          active
+            ? "border-red-100 bg-red-50 text-red-600"
+            : "border-emerald-100 bg-emerald-50 text-emerald-600"
+        }
+      `}
     >
+      <span
+        className={`
+          h-1.5
+          w-1.5
+          rounded-full
+          ${
+            active
+              ? "bg-red-500"
+              : "bg-emerald-500"
+          }
+        `}
+      />
+
       {capitalize(
         status
       )}
@@ -876,13 +1157,13 @@ function getSeverityClass(
 ) {
   switch (severity) {
     case "critical":
-      return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400";
+      return "bg-red-50 text-red-500";
 
     case "warning":
-      return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400";
+      return "bg-amber-50 text-amber-500";
 
     default:
-      return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
+      return "bg-blue-50 text-blue-500";
   }
 }
 
@@ -894,12 +1175,18 @@ function formatNumber(
   value: number
 ) {
   if (
-    Number.isInteger(value)
+    Number.isInteger(
+      value
+    )
   ) {
-    return String(value);
+    return String(
+      value
+    );
   }
 
-  return value.toFixed(2);
+  return value.toFixed(
+    2
+  );
 }
 
 // =====================================================
@@ -924,7 +1211,15 @@ function formatDate(
     return "—";
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString(
+    [],
+    {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }
+  );
 }
 
 // =====================================================

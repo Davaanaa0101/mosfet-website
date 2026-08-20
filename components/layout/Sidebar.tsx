@@ -37,7 +37,8 @@ export default function Sidebar() {
 
       await signOut();
 
-      window.location.href = "/login";
+      window.location.href =
+        "/login";
     } catch (error) {
       console.error(
         "[Sidebar] Logout error:",
@@ -46,6 +47,36 @@ export default function Sidebar() {
 
       setLoggingOut(false);
     }
+  }
+
+  // =====================================================
+  // ACTIVE ROUTE
+  // =====================================================
+
+  function isItemActive(
+    href: string
+  ): boolean {
+    /*
+     * Dashboard is a special case.
+     *
+     * /dashboard       -> Dashboard ACTIVE
+     * /dashboard/alerts -> Dashboard NOT ACTIVE
+     * /dashboard/devices -> Dashboard NOT ACTIVE
+     *
+     * Other menu items can still
+     * match their nested routes.
+     */
+
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+
+    return (
+      pathname === href ||
+      pathname.startsWith(
+        `${href}/`
+      )
+    );
   }
 
   // =====================================================
@@ -177,10 +208,8 @@ export default function Sidebar() {
                 item.icon;
 
               const isActive =
-                pathname ===
-                  item.href ||
-                pathname.startsWith(
-                  `${item.href}/`
+                isItemActive(
+                  item.href
                 );
 
               return (
