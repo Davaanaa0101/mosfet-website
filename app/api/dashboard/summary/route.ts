@@ -4,27 +4,21 @@ import {
 } from "next/server";
 
 import { auth } from "@/lib/auth";
-
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
 
-const ONLINE_THRESHOLD_MS =
-  30_000;
+const ONLINE_THRESHOLD_MS = 30_000;
 
-export async function GET(
-  request: NextRequest
-) {
+export async function GET(request: NextRequest) {
   try {
     // =====================================================
     // AUTHENTICATION
     // =====================================================
 
-    const session =
-      await auth.api.getSession({
-        headers:
-          request.headers,
-      });
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
     if (!session?.user) {
       return NextResponse.json(
@@ -45,292 +39,261 @@ export async function GET(
     await connectDB();
 
     // =====================================================
-    // LOAD ONLY REGISTERED DEVICES BELONGING TO USER
-    // =====================================================
-    //
-    // IMPORTANT:
-    //
-    // Before:
-    //
-    // Device.find()
-    //
-    // This returned EVERY device in MongoDB.
-    //
-    // Now:
-    //
-    // userId = logged-in user
-    //
-    // Therefore:
-    //
-    // NOT_REGISTERED devices
-    // other users' devices
-    //
-    // are excluded.
+    // LOAD ONLY DEVICES BELONGING TO LOGGED-IN USER
     // =====================================================
 
-    const devices =
-      await Device.find({
-        userId:
-          session.user.id,
+    const devices = await Device.find({
+      userId: session.user.id,
+    })
+      .sort({
+        lastSeen: -1,
       })
-        .sort({
-          lastSeen: -1,
-        })
-        .lean();
+      .lean();
 
     // =====================================================
-    // CURRENT TIME
+    // DEVICE IDS
     // =====================================================
 
-    const now =
-      Date.now();
-
-    // =====================================================
-    // ONLINE / OFFLINE
-    // =====================================================
-
-    const onlineDevices =
-      devices.filter(
-        (device) => {
-          if (!device.lastSeen) {
-            return false;
-          }
-
-          const lastSeen =
-            new Date(
-              device.lastSeen
-            ).getTime();
-
-          return (
-            !Number.isNaN(
-              lastSeen
-            ) &&
-            now -
-              lastSeen <=
-              ONLINE_THRESHOLD_MS
-          );
-        }
-      );
-
-    // =====================================================
-    // ONLINE DEVICE IDS
-    // =====================================================
-
-    const onlineIds =
-      new Set(
-        onlineDevices.map(
-          (device) =>
-            String(
-              device._id
-            )
-        )
-      );
-
-    // =====================================================
-    // OFFLINE DEVICES
-    // =====================================================
-
-    const offlineDevices =
-      devices.filter(
-        (device) =>
-          !onlineIds.has(
-            String(
-              device._id
-            )
-          )
-      );
+    const deviceIds = devices.map(
+      (device) => device.deviceId
+    );
 
     // =====================================================
     // LATEST TELEMETRY
     //
-    // Only telemetry belonging to the user's devices
-    // is loaded.
+    // Only load telemetry for the current user's devices.
     // =====================================================
-
-    const deviceIds =
-      devices.map(
-        (device) =>
-          device.deviceId
-      );
 
     const latestTelemetry =
       deviceIds.length > 0
-        ? await DeviceLog.aggregate(
-            [
-              // -----------------------------------------
-              // ONLY USER'S DEVICES
-              // -----------------------------------------
-
-              {
-                $match: {
-                  deviceId: {
-                    $in:
-                      deviceIds,
-                  },
+        ? await DeviceLog.aggregate([
+            {
+              $match: {
+                deviceId: {
+                  $in: deviceIds,
                 },
               },
+            },
 
-              // -----------------------------------------
-              // NEWEST FIRST
-              // -----------------------------------------
+            {
+              $sort: {
+                createdAt: -1,
+              },
+            },
 
-              {
-                $sort: {
-                  createdAt: -1,
+            {
+              $group: {
+                _id: "$deviceId",
+
+                telemetry: {
+                  $first: "$$ROOT",
                 },
               },
-
-              // -----------------------------------------
-              // LATEST RECORD PER DEVICE
-              // -----------------------------------------
-
-              {
-                $group: {
-                  _id:
-                    "$deviceId",
-
-                  telemetry: {
-                    $first:
-                      "$$ROOT",
-                  },
-                },
-              },
-            ]
-          )
+            },
+          ])
         : [];
 
     // =====================================================
     // TELEMETRY MAP
     // =====================================================
 
-    const telemetryMap =
-      new Map<
-        string,
-        Record<
-          string,
-          unknown
-        >
-      >();
+    const telemetryMap = new Map<
+      string,
+      Record<string, any>
+    >();
 
-    for (
-      const item of
-        latestTelemetry
-    ) {
+    for (const item of latestTelemetry) {
       if (
         item?._id &&
         item?.telemetry
       ) {
         telemetryMap.set(
-          String(
-            item._id
-          ),
+          String(item._id),
           item.telemetry
         );
       }
     }
 
     // =====================================================
+    // CURRENT TIME
+    // =====================================================
+
+    const now = Date.now();
+
+    // =====================================================
     // BUILD DEVICE DATA
     // =====================================================
 
-    const dashboardDevices =
-      devices.map(
-        (device) => {
-          const telemetry =
-            telemetryMap.get(
-              device.deviceId
-            ) || null;
+    const dashboardDevices = devices.map(
+      (device) => {
+        const telemetry =
+          telemetryMap.get(
+            device.deviceId
+          ) || null;
 
-          // ---------------------------------------------
-          // DETERMINE STATUS
-          // ---------------------------------------------
+        // -------------------------------------------------
+        // TELEMETRY TIME
+        //
+        // IMPORTANT:
+        // Use DeviceLog.createdAt instead of Device.lastSeen
+        // because DeviceLog is the actual telemetry source.
+        // -------------------------------------------------
 
-          let status =
-            device.status;
+        let telemetryTime = 0;
 
-          const lastSeen =
-            device.lastSeen
-              ? new Date(
-                  device.lastSeen
-                ).getTime()
-              : 0;
+        if (telemetry?.createdAt) {
+          telemetryTime = new Date(
+            telemetry.createdAt
+          ).getTime();
+        }
 
-          const hasRecentTelemetry =
-            lastSeen > 0 &&
-            !Number.isNaN(
-              lastSeen
-            ) &&
-            now -
-              lastSeen <=
-              ONLINE_THRESHOLD_MS;
+        const hasTelemetry =
+          telemetryTime > 0 &&
+          !Number.isNaN(
+            telemetryTime
+          );
+
+        const hasRecentTelemetry =
+          hasTelemetry &&
+          now - telemetryTime <=
+            ONLINE_THRESHOLD_MS;
+
+        // -------------------------------------------------
+        // PREVIOUS TELEMETRY
+        //
+        // If telemetry exists but is stale, the device
+        // is OFFLINE.
+        //
+        // If there has never been telemetry, it remains
+        // REGISTERED.
+        // -------------------------------------------------
+
+        let status: string;
+
+        if (!hasTelemetry) {
+          status = "REGISTERED";
+        } else if (!hasRecentTelemetry) {
+          status = "OFFLINE";
+        } else {
+          // Device is currently communicating.
+          //
+          // Preserve WARNING / ERROR from the device model.
+          // Otherwise consider it RUNNING.
+
+          const deviceStatus =
+            String(
+              device.status || ""
+            ).toUpperCase();
 
           if (
-            !hasRecentTelemetry
+            deviceStatus ===
+            "ERROR"
           ) {
-            status =
-              "OFFLINE";
+            status = "ERROR";
+          } else if (
+            deviceStatus ===
+            "WARNING"
+          ) {
+            status = "WARNING";
+          } else {
+            status = "RUNNING";
           }
-
-          return {
-            // -------------------------------------------
-            // IDENTITY
-            // -------------------------------------------
-
-            _id: String(
-              device._id
-            ),
-
-            deviceId:
-              device.deviceId,
-
-            serialId:
-              device.serialId,
-
-            deviceName:
-              device.name ||
-              device.deviceId,
-
-            // -------------------------------------------
-            // STATUS
-            // -------------------------------------------
-
-            status,
-
-            // -------------------------------------------
-            // NETWORK
-            // -------------------------------------------
-
-            ipAddress:
-              device.ipAddress ||
-              "",
-
-            location:
-              device.location ||
-              "",
-
-            type:
-              device.type ||
-              "esp32",
-
-            // -------------------------------------------
-            // TIMESTAMPS
-            // -------------------------------------------
-
-            lastSeen:
-              device.lastSeen ||
-              null,
-
-            registeredAt:
-              device.registeredAt ||
-              null,
-
-            // -------------------------------------------
-            // TELEMETRY
-            // -------------------------------------------
-
-            telemetry,
-          };
         }
+
+        // -------------------------------------------------
+        // LAST SEEN
+        //
+        // Prefer actual telemetry time.
+        // This prevents the dashboard from showing
+        // OFFLINE while telemetry is actively arriving.
+        // -------------------------------------------------
+
+        const effectiveLastSeen =
+          hasTelemetry
+            ? telemetry.createdAt
+            : device.lastSeen || null;
+
+        return {
+          // -----------------------------------------------
+          // IDENTITY
+          // -----------------------------------------------
+
+          _id: String(
+            device._id
+          ),
+
+          deviceId:
+            device.deviceId,
+
+          serialId:
+            device.serialId,
+
+          deviceName:
+            device.name ||
+            device.deviceId,
+
+          // -----------------------------------------------
+          // STATUS
+          // -----------------------------------------------
+
+          status,
+
+          // -----------------------------------------------
+          // NETWORK
+          // -----------------------------------------------
+
+          ipAddress:
+            device.ipAddress || "",
+
+          location:
+            device.location || "",
+
+          type:
+            device.type || "esp32",
+
+          // -----------------------------------------------
+          // TIMESTAMPS
+          // -----------------------------------------------
+
+          lastSeen:
+            effectiveLastSeen,
+
+          registeredAt:
+            device.registeredAt ||
+            null,
+
+          // -----------------------------------------------
+          // TELEMETRY
+          // -----------------------------------------------
+
+          telemetry,
+        };
+      }
+    );
+
+    // =====================================================
+    // USER DEVICE STATISTICS
+    // =====================================================
+
+    const totalDevices =
+      dashboardDevices.length;
+
+    const onlineDevices =
+      dashboardDevices.filter(
+        (device) =>
+          device.status ===
+            "RUNNING" ||
+          device.status ===
+            "WARNING" ||
+          device.status ===
+            "ERROR"
+      );
+
+    const offlineDevices =
+      dashboardDevices.filter(
+        (device) =>
+          device.status ===
+          "OFFLINE"
       );
 
     // =====================================================
@@ -351,23 +314,14 @@ export async function GET(
     // =====================================================
     // RECENT ACTIVITY
     //
-    // IMPORTANT:
-    //
-    // Before:
-    //
-    // DeviceLog.find()
-    //
-    // That returned activity from EVERY device.
-    //
-    // Now we only query the user's devices.
+    // Only current user's devices.
     // =====================================================
 
     const rawActivity =
       deviceIds.length > 0
         ? await DeviceLog.find({
             deviceId: {
-              $in:
-                deviceIds,
+              $in: deviceIds,
             },
           })
             .sort({
@@ -449,8 +403,7 @@ export async function GET(
       // =================================================
 
       stats: {
-        totalDevices:
-          devices.length,
+        totalDevices,
 
         onlineDevices:
           onlineDevices.length,
@@ -467,7 +420,7 @@ export async function GET(
         dashboardDevices,
 
       // =================================================
-      // USER DEVICE ACTIVITY ONLY
+      // USER ACTIVITY ONLY
       // =================================================
 
       recentActivity,
@@ -481,7 +434,6 @@ export async function GET(
     return NextResponse.json(
       {
         success: false,
-
         error:
           "Failed to load dashboard",
       },

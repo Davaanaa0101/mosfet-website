@@ -13,9 +13,9 @@ const MAX_LIMIT = 5000;
 // =====================================================
 // GET DEVICE TELEMETRY
 //
-// Dashboard authentication only.
+// Dashboard authentication.
 //
-// User must own the device.
+// User can only access devices registered to their account.
 // =====================================================
 
 export async function GET(
@@ -79,15 +79,23 @@ export async function GET(
     }
 
     // =================================================
-    // FIND DEVICE BY DEVICE ID
+    // FIND REGISTERED DEVICE
     //
-    // OWNERSHIP INCLUDED.
+    // IMPORTANT:
+    //
+    // userId MUST match the logged-in user.
+    //
+    // This means:
+    //
+    // User A cannot access User B's device.
+    //
+    // Unregistered devices have no userId and therefore
+    // cannot be accessed from the dashboard.
     // =================================================
 
     let device =
       await Device.findOne({
         deviceId: id,
-
         userId:
           session.user.id,
       }).lean();
@@ -101,17 +109,17 @@ export async function GET(
         device =
           await Device.findOne({
             _id: id,
-
             userId:
               session.user.id,
           }).lean();
       } catch {
         // Invalid MongoDB ObjectId.
+        // Continue to not-found response.
       }
     }
 
     // =================================================
-    // NOT FOUND
+    // DEVICE NOT FOUND
     // =================================================
 
     if (!device) {
@@ -126,6 +134,17 @@ export async function GET(
         }
       );
     }
+
+    // =================================================
+    // NON-NULL DEVICE
+    //
+    // Prevent TypeScript:
+    //
+    // "'device' is possibly 'null'"
+    // =================================================
+
+    const registeredDevice =
+      device;
 
     // =================================================
     // QUERY PARAMETERS
@@ -258,19 +277,40 @@ export async function GET(
     }
 
     // =================================================
-    // BUILD QUERY
+    // BUILD TELEMETRY QUERY
     // =================================================
 
     const query: {
       deviceId: string;
+
+      serialId?: string;
 
       createdAt?: {
         $gte: Date;
       };
     } = {
       deviceId:
-        device.deviceId,
+        registeredDevice.deviceId,
     };
+
+    // =================================================
+    // SERIAL ID FILTER
+    //
+    // New telemetry contains both deviceId and serialId.
+    //
+    // We include serialId when available.
+    // =================================================
+
+    if (
+      registeredDevice.serialId
+    ) {
+      query.serialId =
+        registeredDevice.serialId;
+    }
+
+    // =================================================
+    // DATE FILTER
+    // =================================================
 
     if (fromDate) {
       query.createdAt = {
@@ -294,9 +334,34 @@ export async function GET(
 
     // =================================================
     // OLDEST → NEWEST
+    //
+    // Better for charts.
     // =================================================
 
     logs.reverse();
+
+    // =================================================
+    // ONLINE STATUS
+    //
+    // Device is considered online if telemetry has
+    // arrived within the last 30 seconds.
+    // =================================================
+
+    const lastSeen =
+      registeredDevice.lastSeen
+        ? new Date(
+            registeredDevice.lastSeen
+          ).getTime()
+        : 0;
+
+    const isOnline =
+      lastSeen > 0 &&
+      !Number.isNaN(
+        lastSeen
+      ) &&
+      Date.now() -
+        lastSeen <=
+        30_000;
 
     // =================================================
     // RESPONSE
@@ -306,11 +371,23 @@ export async function GET(
       success: true,
 
       deviceId:
-        device.deviceId,
+        registeredDevice.deviceId,
+
+      serialId:
+        registeredDevice.serialId,
 
       deviceName:
-        device.name ||
-        device.deviceId,
+        registeredDevice.name ||
+        registeredDevice.deviceId,
+
+      status:
+        registeredDevice.status,
+
+      online:
+        isOnline,
+
+      userId:
+        registeredDevice.userId,
 
       range:
         range || "all",
@@ -318,7 +395,8 @@ export async function GET(
       count:
         logs.length,
 
-      data: logs,
+      data:
+        logs,
     });
   } catch (error) {
     console.error(
