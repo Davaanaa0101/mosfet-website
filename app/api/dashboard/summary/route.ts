@@ -8,6 +8,12 @@ import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 import DeviceLog from "@/models/DeviceLog";
 
+// =====================================================
+// CONFIGURATION
+// =====================================================
+
+// Device is considered online when telemetry was received
+// within the last 30 seconds.
 const ONLINE_THRESHOLD_MS = 30_000;
 
 export async function GET(request: NextRequest) {
@@ -41,6 +47,18 @@ export async function GET(request: NextRequest) {
     // =====================================================
     // LOAD ONLY DEVICES BELONGING TO LOGGED-IN USER
     // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // We MUST NOT use:
+    //
+    //   Device.find()
+    //
+    // because that would return every user's devices.
+    //
+    // Only devices registered to the current logged-in
+    // user's userId are returned.
+    // =====================================================
 
     const devices = await Device.find({
       userId: session.user.id,
@@ -49,6 +67,12 @@ export async function GET(request: NextRequest) {
         lastSeen: -1,
       })
       .lean();
+
+    // =====================================================
+    // CURRENT TIME
+    // =====================================================
+
+    const now = Date.now();
 
     // =====================================================
     // DEVICE IDS
@@ -60,13 +84,19 @@ export async function GET(request: NextRequest) {
 
     // =====================================================
     // LATEST TELEMETRY
+    // =====================================================
     //
-    // Only load telemetry for the current user's devices.
+    // Get only the newest telemetry record for each
+    // device belonging to the logged-in user.
     // =====================================================
 
     const latestTelemetry =
       deviceIds.length > 0
         ? await DeviceLog.aggregate([
+            // ---------------------------------------------
+            // ONLY USER'S DEVICES
+            // ---------------------------------------------
+
             {
               $match: {
                 deviceId: {
@@ -75,11 +105,19 @@ export async function GET(request: NextRequest) {
               },
             },
 
+            // ---------------------------------------------
+            // NEWEST TELEMETRY FIRST
+            // ---------------------------------------------
+
             {
               $sort: {
                 createdAt: -1,
               },
             },
+
+            // ---------------------------------------------
+            // LATEST RECORD PER DEVICE
+            // ---------------------------------------------
 
             {
               $group: {
@@ -115,37 +153,46 @@ export async function GET(request: NextRequest) {
     }
 
     // =====================================================
-    // CURRENT TIME
-    // =====================================================
-
-    const now = Date.now();
-
-    // =====================================================
-    // BUILD DEVICE DATA
+    // BUILD DASHBOARD DEVICES
     // =====================================================
 
     const dashboardDevices = devices.map(
       (device) => {
+        // -----------------------------------------------
+        // FIND LATEST TELEMETRY
+        // -----------------------------------------------
+
         const telemetry =
           telemetryMap.get(
             device.deviceId
           ) || null;
 
-        // -------------------------------------------------
-        // TELEMETRY TIME
+        // -----------------------------------------------
+        // TELEMETRY CREATED AT
         //
         // IMPORTANT:
-        // Use DeviceLog.createdAt instead of Device.lastSeen
-        // because DeviceLog is the actual telemetry source.
-        // -------------------------------------------------
+        //
+        // Use optional chaining here so TypeScript knows
+        // telemetry can safely be null.
+        // -----------------------------------------------
 
-        let telemetryTime = 0;
+        const telemetryCreatedAt =
+          telemetry?.createdAt || null;
 
-        if (telemetry?.createdAt) {
-          telemetryTime = new Date(
-            telemetry.createdAt
-          ).getTime();
-        }
+        // -----------------------------------------------
+        // TELEMETRY TIMESTAMP
+        // -----------------------------------------------
+
+        const telemetryTime =
+          telemetryCreatedAt
+            ? new Date(
+                telemetryCreatedAt
+              ).getTime()
+            : 0;
+
+        // -----------------------------------------------
+        // HAS TELEMETRY
+        // -----------------------------------------------
 
         const hasTelemetry =
           telemetryTime > 0 &&
@@ -153,70 +200,101 @@ export async function GET(request: NextRequest) {
             telemetryTime
           );
 
+        // -----------------------------------------------
+        // RECENT TELEMETRY
+        // -----------------------------------------------
+
         const hasRecentTelemetry =
           hasTelemetry &&
           now - telemetryTime <=
             ONLINE_THRESHOLD_MS;
 
-        // -------------------------------------------------
-        // PREVIOUS TELEMETRY
-        //
-        // If telemetry exists but is stale, the device
-        // is OFFLINE.
-        //
-        // If there has never been telemetry, it remains
-        // REGISTERED.
-        // -------------------------------------------------
+        // -----------------------------------------------
+        // DETERMINE STATUS
+        // -----------------------------------------------
 
         let status: string;
 
+        // -------------------------------------------------
+        // NO TELEMETRY EVER RECEIVED
+        // -------------------------------------------------
+
         if (!hasTelemetry) {
           status = "REGISTERED";
-        } else if (!hasRecentTelemetry) {
-          status = "OFFLINE";
-        } else {
-          // Device is currently communicating.
-          //
-          // Preserve WARNING / ERROR from the device model.
-          // Otherwise consider it RUNNING.
+        }
 
+        // -------------------------------------------------
+        // TELEMETRY EXISTS BUT IS TOO OLD
+        // -------------------------------------------------
+
+        else if (!hasRecentTelemetry) {
+          status = "OFFLINE";
+        }
+
+        // -------------------------------------------------
+        // DEVICE IS CURRENTLY ONLINE
+        // -------------------------------------------------
+
+        else {
           const deviceStatus =
             String(
               device.status || ""
             ).toUpperCase();
+
+          // -----------------------------------------------
+          // ERROR
+          // -----------------------------------------------
 
           if (
             deviceStatus ===
             "ERROR"
           ) {
             status = "ERROR";
-          } else if (
+          }
+
+          // -----------------------------------------------
+          // WARNING
+          // -----------------------------------------------
+
+          else if (
             deviceStatus ===
             "WARNING"
           ) {
             status = "WARNING";
-          } else {
+          }
+
+          // -----------------------------------------------
+          // NORMAL
+          // -----------------------------------------------
+
+          else {
             status = "RUNNING";
           }
         }
 
-        // -------------------------------------------------
-        // LAST SEEN
+        // -----------------------------------------------
+        // EFFECTIVE LAST SEEN
         //
-        // Prefer actual telemetry time.
+        // Prefer actual telemetry timestamp.
+        //
         // This prevents the dashboard from showing
-        // OFFLINE while telemetry is actively arriving.
-        // -------------------------------------------------
+        // OFFLINE when telemetry is actively arriving
+        // but Device.lastSeen was not updated correctly.
+        // -----------------------------------------------
 
         const effectiveLastSeen =
-          hasTelemetry
-            ? telemetry.createdAt
-            : device.lastSeen || null;
+          telemetryCreatedAt ||
+          device.lastSeen ||
+          null;
+
+        // -----------------------------------------------
+        // RETURN DEVICE
+        // -----------------------------------------------
 
         return {
-          // -----------------------------------------------
+          // ---------------------------------------------
           // IDENTITY
-          // -----------------------------------------------
+          // ---------------------------------------------
 
           _id: String(
             device._id
@@ -232,28 +310,31 @@ export async function GET(request: NextRequest) {
             device.name ||
             device.deviceId,
 
-          // -----------------------------------------------
+          // ---------------------------------------------
           // STATUS
-          // -----------------------------------------------
+          // ---------------------------------------------
 
           status,
 
-          // -----------------------------------------------
+          // ---------------------------------------------
           // NETWORK
-          // -----------------------------------------------
+          // ---------------------------------------------
 
           ipAddress:
-            device.ipAddress || "",
+            device.ipAddress ||
+            "",
 
           location:
-            device.location || "",
+            device.location ||
+            "",
 
           type:
-            device.type || "esp32",
+            device.type ||
+            "esp32",
 
-          // -----------------------------------------------
+          // ---------------------------------------------
           // TIMESTAMPS
-          // -----------------------------------------------
+          // ---------------------------------------------
 
           lastSeen:
             effectiveLastSeen,
@@ -262,9 +343,9 @@ export async function GET(request: NextRequest) {
             device.registeredAt ||
             null,
 
-          // -----------------------------------------------
+          // ---------------------------------------------
           // TELEMETRY
-          // -----------------------------------------------
+          // ---------------------------------------------
 
           telemetry,
         };
@@ -277,6 +358,9 @@ export async function GET(request: NextRequest) {
 
     const totalDevices =
       dashboardDevices.length;
+
+    // RUNNING / WARNING / ERROR are all considered
+    // currently online because telemetry is recent.
 
     const onlineDevices =
       dashboardDevices.filter(
@@ -313,8 +397,10 @@ export async function GET(request: NextRequest) {
 
     // =====================================================
     // RECENT ACTIVITY
+    // =====================================================
     //
-    // Only current user's devices.
+    // Only activity belonging to the current user's
+    // devices is returned.
     // =====================================================
 
     const rawActivity =
@@ -338,8 +424,16 @@ export async function GET(request: NextRequest) {
     const recentActivity =
       rawActivity.map(
         (activity) => ({
+          // ---------------------------------------------
+          // ID
+          // ---------------------------------------------
+
           _id:
             activity._id,
+
+          // ---------------------------------------------
+          // DEVICE
+          // ---------------------------------------------
 
           deviceId:
             activity.deviceId,
@@ -349,6 +443,10 @@ export async function GET(request: NextRequest) {
               activity.deviceId
             ) ||
             activity.deviceId,
+
+          // ---------------------------------------------
+          // SENSOR DATA
+          // ---------------------------------------------
 
           temperature:
             activity.temperature,
@@ -368,6 +466,10 @@ export async function GET(request: NextRequest) {
           energy:
             activity.energy,
 
+          // ---------------------------------------------
+          // NETWORK
+          // ---------------------------------------------
+
           wifiSSID:
             activity.wifiSSID,
 
@@ -377,14 +479,26 @@ export async function GET(request: NextRequest) {
           rssi:
             activity.rssi,
 
+          // ---------------------------------------------
+          // SYSTEM
+          // ---------------------------------------------
+
           freeHeap:
             activity.freeHeap,
 
           uptime:
             activity.uptime,
 
+          // ---------------------------------------------
+          // SENSORS
+          // ---------------------------------------------
+
           sensors:
             activity.sensors,
+
+          // ---------------------------------------------
+          // TIMESTAMP
+          // ---------------------------------------------
 
           createdAt:
             activity.createdAt,
@@ -420,12 +534,16 @@ export async function GET(request: NextRequest) {
         dashboardDevices,
 
       // =================================================
-      // USER ACTIVITY ONLY
+      // USER DEVICE ACTIVITY ONLY
       // =================================================
 
       recentActivity,
     });
   } catch (error) {
+    // =====================================================
+    // ERROR
+    // =====================================================
+
     console.error(
       "[dashboard] Error:",
       error
@@ -434,6 +552,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
+
         error:
           "Failed to load dashboard",
       },
