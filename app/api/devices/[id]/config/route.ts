@@ -99,12 +99,12 @@ function getBearerToken(
 }
 
 // =====================================================
-// SAFE API KEY COMPARISON
+// SAFE TOKEN COMPARISON
 // =====================================================
 
 function safeCompare(
-  a: string,
-  b: string
+  a: string | undefined,
+  b: string | undefined
 ): boolean {
   if (!a || !b) {
     return false;
@@ -171,6 +171,11 @@ async function findDevice(
 // Authorization:
 // Bearer DEVICE_API_KEY
 //
+// OR during provisioning:
+//
+// Authorization:
+// Bearer PROVISIONING_KEY
+//
 // Dashboard:
 //
 // Better Auth session cookie
@@ -234,7 +239,7 @@ export async function GET(
     }
 
     // =================================================
-    // CHECK FOR DEVICE API KEY
+    // AUTHENTICATION
     // =================================================
 
     const bearerToken =
@@ -245,15 +250,52 @@ export async function GET(
     // =================================================
 
     if (bearerToken) {
+      let authenticationType:
+        | "API_KEY"
+        | "PROVISIONING_KEY"
+        | null =
+        null;
+
+      // -----------------------------------------------
+      // 1. PERMANENT API KEY
+      // -----------------------------------------------
+
       if (
-        !device.apiKey ||
-        !safeCompare(
+        device.apiKey &&
+        safeCompare(
           bearerToken,
           device.apiKey
         )
       ) {
+        authenticationType =
+          "API_KEY";
+      }
+
+      // -----------------------------------------------
+      // 2. PROVISIONING KEY
+      //
+      // This is used only during the transition from
+      // NOT_REGISTERED → REGISTERED.
+      // -----------------------------------------------
+
+      else if (
+        device.provisioningKey &&
+        safeCompare(
+          bearerToken,
+          device.provisioningKey
+        )
+      ) {
+        authenticationType =
+          "PROVISIONING_KEY";
+      }
+
+      // -----------------------------------------------
+      // INVALID TOKEN
+      // -----------------------------------------------
+
+      if (!authenticationType) {
         console.warn(
-          "[device-config] Invalid device API key:",
+          "[device-config] Invalid device credential:",
           {
             deviceId:
               device.deviceId,
@@ -277,83 +319,304 @@ export async function GET(
 
       console.log(
         "[device-config] ESP32 authenticated:",
-        device.deviceId
+        {
+          deviceId:
+            device.deviceId,
+
+          authenticationType,
+        }
       );
+
+      // =================================================
+      // BUILD CONFIGURATION
+      // =================================================
+
+      const sendInterval =
+        typeof device.sendInterval ===
+          "number" &&
+        device.sendInterval >=
+          1000
+          ? device.sendInterval
+          : DEFAULT_CONFIG.sendInterval;
+
+      const sensors =
+        Array.isArray(
+          device.sensors
+        ) &&
+        device.sensors.length >
+          0
+          ? device.sensors
+              .map(
+                (sensor) => ({
+                  slot:
+                    sensor.slot,
+
+                  type:
+                    sensor.type ||
+                    "N/A",
+
+                  name:
+                    sensor.name ||
+                    `Sensor #${sensor.slot}`,
+
+                  unit:
+                    sensor.unit ||
+                    "",
+                })
+              )
+              .sort(
+                (a, b) =>
+                  a.slot -
+                  b.slot
+              )
+          : DEFAULT_CONFIG.sensors;
+
+      // =================================================
+      // PROVISIONING → PERMANENT API KEY
+      // =================================================
+      //
+      // If ESP32 authenticated using the temporary
+      // provisioning key and the device has now been
+      // registered by a user, return the permanent
+      // API key.
+      //
+      // Then remove provisioningKey so it cannot be
+      // used again.
+      // =================================================
+
+      if (
+        authenticationType ===
+        "PROVISIONING_KEY"
+      ) {
+        // ---------------------------------------------
+        // Device has NOT been registered yet
+        // ---------------------------------------------
+
+        if (
+          !device.userId ||
+          !device.apiKey
+        ) {
+          return NextResponse.json({
+            success: true,
+
+            registered: false,
+
+            deviceId:
+              device.deviceId,
+
+            serialId:
+              device.serialId,
+
+            deviceName:
+              device.name ||
+              device.deviceId,
+
+            status:
+              device.status,
+
+            sendInterval,
+
+            sensors,
+
+            message:
+              "Device is waiting for registration.",
+          });
+        }
+
+        // ---------------------------------------------
+        // Device HAS been registered.
+        //
+        // Send permanent API key to ESP32.
+        // ---------------------------------------------
+
+        const permanentApiKey =
+          device.apiKey;
+
+        // ---------------------------------------------
+        // Remove temporary provisioning key.
+        // ---------------------------------------------
+
+        device.provisioningKey =
+          undefined;
+
+        // ---------------------------------------------
+        // Device has successfully completed
+        // provisioning.
+        // ---------------------------------------------
+
+        device.status =
+          "REGISTERED";
+
+        device.lastSeen =
+          new Date();
+
+        await device.save();
+
+        console.log(
+          "[device-config] Provisioning completed:",
+          {
+            deviceId:
+              device.deviceId,
+          }
+        );
+
+        return NextResponse.json({
+          success: true,
+
+          registered: true,
+
+          provisioningComplete:
+            true,
+
+          deviceId:
+            device.deviceId,
+
+          serialId:
+            device.serialId,
+
+          deviceName:
+            device.name ||
+            device.deviceId,
+
+          status:
+            device.status,
+
+          // IMPORTANT:
+          // ESP32 must save this value permanently.
+
+          apiKey:
+            permanentApiKey,
+
+          sendInterval,
+
+          sensors,
+        });
+      }
+
+      // =================================================
+      // NORMAL REGISTERED DEVICE
+      // =================================================
+
+      if (
+        authenticationType ===
+        "API_KEY"
+      ) {
+        // ---------------------------------------------
+        // API key should always belong to a registered
+        // device.
+        // ---------------------------------------------
+
+        if (
+          !device.userId
+        ) {
+          return NextResponse.json(
+            {
+              success: false,
+
+              error:
+                "Device is not registered",
+            },
+            {
+              status: 403,
+            }
+          );
+        }
+
+        // ---------------------------------------------
+        // UPDATE LAST SEEN
+        // ---------------------------------------------
+
+        device.lastSeen =
+          new Date();
+
+        // If previously registered but currently
+        // offline, mark it running when it successfully
+        // communicates.
+
+        if (
+          device.status ===
+          "REGISTERED" ||
+          device.status ===
+          "OFFLINE"
+        ) {
+          device.status =
+            "RUNNING";
+        }
+
+        await device.save();
+
+        // ---------------------------------------------
+        // NORMAL RESPONSE
+        // ---------------------------------------------
+
+        return NextResponse.json({
+          success: true,
+
+          registered: true,
+
+          provisioningComplete:
+            false,
+
+          deviceId:
+            device.deviceId,
+
+          serialId:
+            device.serialId,
+
+          deviceName:
+            device.name ||
+            device.deviceId,
+
+          status:
+            device.status,
+
+          sendInterval,
+
+          sensors,
+        });
+      }
     }
 
     // =================================================
     // DASHBOARD AUTHENTICATION
     // =================================================
 
-    else {
-      const session =
-        await auth.api.getSession({
-          headers:
-            request.headers,
-        });
+    const session =
+      await auth.api.getSession({
+        headers:
+          request.headers,
+      });
 
-      if (!session?.user) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Unauthorized",
-          },
-          {
-            status: 401,
-          }
-        );
-      }
-
-      // =================================================
-      // OWNERSHIP CHECK
-      // =================================================
-
-      if (
-        !device.userId ||
-        device.userId !==
-          session.user.id
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Device not found",
-          },
-          {
-            status: 404,
-          }
-        );
-      }
-
-      console.log(
-        "[device-config] Dashboard authenticated:",
+    if (!session?.user) {
+      return NextResponse.json(
         {
-          deviceId:
-            device.deviceId,
-
-          userId:
-            session.user.id,
+          success: false,
+          error:
+            "Unauthorized",
+        },
+        {
+          status: 401,
         }
       );
     }
 
     // =================================================
-    // DEVICE MUST BE REGISTERED
+    // OWNERSHIP CHECK
     // =================================================
 
     if (
       !device.userId ||
-      !device.apiKey
+      device.userId !==
+        session.user.id
     ) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Device is not registered",
+            "Device not found",
         },
         {
-          status: 403,
+          status: 404,
         }
       );
     }
@@ -365,7 +628,8 @@ export async function GET(
     const sendInterval =
       typeof device.sendInterval ===
         "number" &&
-      device.sendInterval >= 1000
+      device.sendInterval >=
+        1000
         ? device.sendInterval
         : DEFAULT_CONFIG.sendInterval;
 
@@ -405,11 +669,13 @@ export async function GET(
         : DEFAULT_CONFIG.sensors;
 
     // =================================================
-    // RESPONSE
+    // DASHBOARD RESPONSE
     // =================================================
 
     return NextResponse.json({
       success: true,
+
+      registered: true,
 
       deviceId:
         device.deviceId,
@@ -420,6 +686,9 @@ export async function GET(
       deviceName:
         device.name ||
         device.deviceId,
+
+      status:
+        device.status,
 
       sendInterval,
 

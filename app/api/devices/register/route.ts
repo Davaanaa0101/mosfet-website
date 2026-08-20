@@ -10,7 +10,7 @@ import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
 
 // =====================================================
-// GENERATE DEVICE API KEY
+// GENERATE PERMANENT DEVICE API KEY
 // =====================================================
 
 function generateApiKey(): string {
@@ -22,14 +22,28 @@ function generateApiKey(): string {
 // =====================================================
 // POST
 //
-// Register a physical device to the logged-in user.
+// Register a bootstrapped physical device to the
+// currently authenticated user.
 //
 // Request:
 //
 // {
-//   "serialId": "MOSFET-ESP32-000001"
+//   "serialId": "MOSFET-ESP32-000002"
 // }
 //
+// IMPORTANT:
+//
+// The device must already exist in MongoDB through:
+//
+// POST /api/devices/bootstrap
+//
+// The device must have:
+// - serialId
+// - deviceId
+// - provisioningKey
+// - status = NOT_REGISTERED
+// - no userId
+// - no permanent apiKey
 // =====================================================
 
 export async function POST(
@@ -42,16 +56,14 @@ export async function POST(
 
     const session =
       await auth.api.getSession({
-        headers:
-          request.headers,
+        headers: request.headers,
       });
 
     if (!session?.user) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Unauthorized",
+          error: "Unauthorized",
         },
         {
           status: 401,
@@ -66,14 +78,12 @@ export async function POST(
     let body: unknown;
 
     try {
-      body =
-        await request.json();
+      body = await request.json();
     } catch {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Invalid JSON body",
+          error: "Invalid JSON body",
         },
         {
           status: 400,
@@ -86,16 +96,14 @@ export async function POST(
     // =================================================
 
     const serialId =
-      typeof body ===
-        "object" &&
+      typeof body === "object" &&
       body !== null &&
       "serialId" in body &&
       typeof (
         body as {
           serialId?: unknown;
         }
-      ).serialId ===
-        "string"
+      ).serialId === "string"
         ? (
             body as {
               serialId: string;
@@ -103,12 +111,15 @@ export async function POST(
           ).serialId.trim()
         : "";
 
+    // =================================================
+    // VALIDATE SERIAL ID
+    // =================================================
+
     if (!serialId) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Serial ID is required",
+          error: "Serial ID is required",
         },
         {
           status: 400,
@@ -116,19 +127,11 @@ export async function POST(
       );
     }
 
-    // =================================================
-    // SERIAL ID VALIDATION
-    // =================================================
-
-    if (
-      serialId.length >
-      100
-    ) {
+    if (serialId.length > 100) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Serial ID is too long",
+          error: "Serial ID is too long",
         },
         {
           status: 400,
@@ -143,7 +146,7 @@ export async function POST(
     await connectDB();
 
     // =================================================
-    // FIND DEVICE
+    // FIND BOOTSTRAPPED DEVICE
     // =================================================
 
     const device =
@@ -151,12 +154,16 @@ export async function POST(
         serialId,
       });
 
+    // =================================================
+    // DEVICE DOES NOT EXIST
+    // =================================================
+
     if (!device) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "Device not found. Please check the Serial ID.",
+            "Device has not been activated yet. Please power on the ESP32 and connect it to the MOSFET server first.",
         },
         {
           status: 404,
@@ -165,7 +172,7 @@ export async function POST(
     }
 
     // =================================================
-    // ALREADY REGISTERED
+    // DEVICE ALREADY BELONGS TO A USER
     // =================================================
 
     if (device.userId) {
@@ -181,14 +188,15 @@ export async function POST(
           {
             success: true,
 
+            alreadyRegistered: true,
+
             message:
               "Device is already registered to your account.",
 
             data: {
-              id:
-                String(
-                  device._id
-                ),
+              id: String(
+                device._id
+              ),
 
               serialId:
                 device.serialId,
@@ -210,12 +218,6 @@ export async function POST(
 
               registeredAt:
                 device.registeredAt,
-
-              // IMPORTANT:
-              // Do NOT return the API key again.
-              //
-              // The user already received it when
-              // the device was first registered.
             },
           },
           {
@@ -242,14 +244,53 @@ export async function POST(
     }
 
     // =================================================
-    // GENERATE API KEY
+    // DEVICE MUST HAVE PROVISIONING KEY
+    // =================================================
+
+    if (!device.provisioningKey) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            "This device has not completed provisioning. Please restart the ESP32 and try again.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // =================================================
+    // DEVICE MUST BE UNREGISTERED
+    // =================================================
+
+    if (
+      device.status !==
+      "NOT_REGISTERED"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            "This device is not available for registration.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    // =================================================
+    // GENERATE PERMANENT API KEY
     // =================================================
 
     const apiKey =
       generateApiKey();
 
     // =================================================
-    // REGISTER DEVICE
+    // ASSIGN DEVICE TO USER
     // =================================================
 
     device.userId =
@@ -258,11 +299,25 @@ export async function POST(
     device.registeredAt =
       new Date();
 
+    // Permanent credential
     device.apiKey =
       apiKey;
 
+    // Device is now registered
     device.status =
       "REGISTERED";
+
+    // =================================================
+    // IMPORTANT
+    //
+    // DO NOT REMOVE provisioningKey YET.
+    //
+    // ESP32 still needs it to authenticate against
+    // /api/devices/<deviceId>/config and receive the
+    // permanent API key.
+    //
+    // It will be removed after provisioning completes.
+    // =================================================
 
     await device.save();
 
@@ -274,14 +329,17 @@ export async function POST(
       {
         success: true,
 
+        registered: true,
+
+        provisioningPending: true,
+
         message:
-          "Device registered successfully.",
+          "Device registered successfully. Waiting for the ESP32 to receive its permanent API key.",
 
         data: {
-          id:
-            String(
-              device._id
-            ),
+          id: String(
+            device._id
+          ),
 
           serialId:
             device.serialId,
@@ -307,10 +365,11 @@ export async function POST(
           // =========================================
           // IMPORTANT
           //
-          // This is the ONLY response where we return
-          // the generated API key.
+          // This API key is returned to the logged-in
+          // user only once.
           //
-          // Save it to the ESP32.
+          // The ESP32 receives the same key separately
+          // through the provisioning flow.
           // =========================================
 
           apiKey,
@@ -321,6 +380,10 @@ export async function POST(
       }
     );
   } catch (error) {
+    // =================================================
+    // ERROR LOG
+    // =================================================
+
     console.error(
       "[device-register] POST error:",
       error
@@ -332,17 +395,18 @@ export async function POST(
 
     if (
       error &&
-      typeof error ===
-        "object" &&
+      typeof error === "object" &&
       "code" in error &&
-      (error as {
-        code?: number;
-      }).code ===
-        11000
+      (
+        error as {
+          code?: number;
+        }
+      ).code === 11000
     ) {
       return NextResponse.json(
         {
           success: false,
+
           error:
             "Device registration conflict. The device may already be registered.",
         },

@@ -82,7 +82,21 @@ export interface IDevice
   lastSeen?: Date;
 
   // -------------------------------------------
+  // DEVICE PROVISIONING KEY
+  //
+  // Temporary credential used when the physical
+  // device first connects to MOSFET.
+  //
+  // This is NOT the permanent API key.
+  // -------------------------------------------
+
+  provisioningKey?: string;
+
+  // -------------------------------------------
   // DEVICE API KEY
+  //
+  // Permanent credential assigned after the
+  // device is registered to a user.
   // -------------------------------------------
 
   apiKey?: string;
@@ -157,6 +171,7 @@ const DeviceSchema =
       // SERIAL ID
       //
       // Physical identity printed on the ESP32.
+      //
       // Example:
       // MOSFET-ESP32-000001
       // -----------------------------------------
@@ -173,6 +188,7 @@ const DeviceSchema =
       // DEVICE ID
       //
       // Internal ESP32/device identifier.
+      //
       // Example:
       // esp32_1
       // -----------------------------------------
@@ -201,12 +217,14 @@ const DeviceSchema =
 
       type: {
         type: String,
+
         enum: [
           "esp32",
           "plc",
           "modbus",
           "camera",
         ],
+
         default: "esp32",
       },
 
@@ -290,7 +308,29 @@ const DeviceSchema =
       },
 
       // -----------------------------------------
+      // DEVICE PROVISIONING KEY
+      //
+      // Temporary key used during the initial
+      // device provisioning process.
+      //
+      // This key is different from apiKey.
+      //
+      // Once the device is registered, the
+      // provisioning key can be removed.
+      // -----------------------------------------
+
+      provisioningKey: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
+      },
+
+      // -----------------------------------------
       // DEVICE API KEY
+      //
+      // Permanent credential assigned after
+      // registration.
       // -----------------------------------------
 
       apiKey: {
@@ -326,42 +366,49 @@ const DeviceSchema =
             name: "DS18B20 #1",
             unit: "°C",
           },
+
           {
             slot: 2,
             type: "TEMPERATURE",
             name: "DS18B20 #2",
             unit: "°C",
           },
+
           {
             slot: 3,
             type: "TEMPERATURE",
             name: "DS18B20 #3",
             unit: "°C",
           },
+
           {
             slot: 4,
             type: "TEMPERATURE",
             name: "DS18B20 #4",
             unit: "°C",
           },
+
           {
             slot: 5,
             type: "TEMPERATURE",
             name: "DS18B20 #5",
             unit: "°C",
           },
+
           {
             slot: 6,
             type: "TEMPERATURE",
             name: "DS18B20 #6",
             unit: "°C",
           },
+
           {
             slot: 7,
             type: "DHT_HUMIDITY",
             name: "AM2302 Humidity",
             unit: "%",
           },
+
           {
             slot: 8,
             type: "N/A",
@@ -381,8 +428,10 @@ const DeviceSchema =
 // EXPORT
 // ---------------------------------------------
 
-export default (mongoose.models.Device ||
+export default (
+  mongoose.models.Device ||
   mongoose.model<IDevice>(
     "Device",
     DeviceSchema
-  )) as Model<IDevice>;
+  )
+) as Model<IDevice>;
