@@ -18,7 +18,7 @@ export default function Hero() {
       "
     >
       {/* ================================================= */}
-      {/* BACKGROUND GRID */}
+      {/* PREMIUM ENGINEERING BACKGROUND */}
       {/* ================================================= */}
 
       <div
@@ -27,78 +27,303 @@ export default function Hero() {
           pointer-events-none
           absolute
           inset-0
-          opacity-[0.035]
+          overflow-hidden
         "
-        style={{
-          backgroundImage: `
-            linear-gradient(
-              to right,
-              currentColor 1px,
-              transparent 1px
-            ),
-            linear-gradient(
-              to bottom,
-              currentColor 1px,
-              transparent 1px
-            )
-          `,
-          backgroundSize: "64px 64px",
-        }}
-      />
+      >
+        {/* =============================================== */}
+        {/* BASE GRADIENT */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            inset-0
+            bg-gradient-to-br
+            from-background
+            via-background
+            to-primary/[0.035]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* LEFT ATMOSPHERIC GLOW */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            -left-[280px]
+            -top-[220px]
+            h-[700px]
+            w-[700px]
+            rounded-full
+            bg-primary/[0.10]
+            blur-[140px]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* RIGHT ATMOSPHERIC GLOW */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            -right-[220px]
+            top-[5%]
+            h-[650px]
+            w-[650px]
+            rounded-full
+            bg-primary/[0.07]
+            blur-[150px]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* CENTER GLOW */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            left-[58%]
+            top-[52%]
+            h-[600px]
+            w-[600px]
+            -translate-x-1/2
+            -translate-y-1/2
+            rounded-full
+            bg-primary/[0.08]
+            blur-[130px]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* FINE ENGINEERING GRID */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            inset-0
+            opacity-[0.045]
+          "
+          style={{
+            backgroundImage: `
+              linear-gradient(
+                to right,
+                hsl(var(--primary) / 0.35) 1px,
+                transparent 1px
+              ),
+              linear-gradient(
+                to bottom,
+                hsl(var(--primary) / 0.35) 1px,
+                transparent 1px
+              )
+            `,
+            backgroundSize:
+              "48px 48px",
+            maskImage:
+              "radial-gradient(ellipse 85% 75% at 55% 45%, black 25%, transparent 85%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 85% 75% at 55% 45%, black 25%, transparent 85%)",
+          }}
+        />
+
+        {/* =============================================== */}
+        {/* TECHNICAL DOT FIELD */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            inset-0
+            opacity-[0.22]
+          "
+          style={{
+            backgroundImage:
+              "radial-gradient(hsl(var(--primary) / 0.35) 1px, transparent 1px)",
+            backgroundSize:
+              "32px 32px",
+            maskImage:
+              "radial-gradient(ellipse 70% 70% at 65% 45%, black, transparent 75%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 70% 70% at 65% 45%, black, transparent 75%)",
+          }}
+        />
+
+        {/* =============================================== */}
+        {/* DIAGONAL LIGHT LINE */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            -right-[10%]
+            top-[12%]
+            h-px
+            w-[70%]
+            rotate-[24deg]
+            bg-gradient-to-r
+            from-transparent
+            via-primary/20
+            to-transparent
+            blur-[1px]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* SECOND DIAGONAL LINE */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            -left-[15%]
+            bottom-[20%]
+            h-px
+            w-[65%]
+            rotate-[-18deg]
+            bg-gradient-to-r
+            from-transparent
+            via-primary/10
+            to-transparent
+          "
+        />
+
+        {/* =============================================== */}
+        {/* VERTICAL TECHNICAL BEAM */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            right-[18%]
+            top-[15%]
+            h-[420px]
+            w-px
+            bg-gradient-to-b
+            from-transparent
+            via-primary/15
+            to-transparent
+          "
+        />
+
+        {/* =============================================== */}
+        {/* HORIZONTAL TECHNICAL BEAM */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            right-[5%]
+            top-[42%]
+            h-px
+            w-[400px]
+            bg-gradient-to-r
+            from-transparent
+            via-primary/15
+            to-transparent
+          "
+        />
+
+        {/* =============================================== */}
+        {/* TECHNICAL NODE 1 */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            right-[28%]
+            top-[22%]
+            h-2
+            w-2
+            rounded-full
+            bg-primary/40
+            shadow-[0_0_20px_hsl(var(--primary)/0.5)]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* TECHNICAL NODE 2 */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            right-[12%]
+            top-[48%]
+            h-1.5
+            w-1.5
+            rounded-full
+            bg-primary/30
+            shadow-[0_0_16px_hsl(var(--primary)/0.4)]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* TECHNICAL NODE 3 */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            left-[48%]
+            bottom-[18%]
+            h-1.5
+            w-1.5
+            rounded-full
+            bg-primary/30
+            shadow-[0_0_16px_hsl(var(--primary)/0.4)]
+          "
+        />
+
+        {/* =============================================== */}
+        {/* TOP HORIZONTAL LINE */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            left-1/2
+            top-24
+            hidden
+            h-px
+            w-[min(90%,1200px)]
+            -translate-x-1/2
+            bg-gradient-to-r
+            from-transparent
+            via-primary/20
+            to-transparent
+            lg:block
+          "
+        />
+
+        {/* =============================================== */}
+        {/* BOTTOM FADE */}
+        {/* =============================================== */}
+
+        <div
+          className="
+            absolute
+            inset-x-0
+            bottom-0
+            h-40
+            bg-gradient-to-t
+            from-background
+            to-transparent
+          "
+        />
+      </div>
 
       {/* ================================================= */}
-      {/* AMBIENT GLOW */}
-      {/* ================================================= */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          left-1/2
-          top-1/2
-          h-[600px]
-          w-[600px]
-          -translate-x-1/2
-          -translate-y-1/2
-          rounded-full
-          bg-primary/[0.08]
-          blur-[160px]
-          lg:h-[800px]
-          lg:w-[800px]
-        "
-      />
-
-      {/* ================================================= */}
-      {/* SMALL TOP LINE */}
-      {/* ================================================= */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          left-1/2
-          top-24
-          hidden
-          h-px
-          w-[min(90%,1200px)]
-          -translate-x-1/2
-          bg-gradient-to-r
-          from-transparent
-          via-primary/20
-          to-transparent
-          lg:block
-        "
-      />
-
-      {/* ================================================= */}
-      {/* CONTENT */}
+      {/* MAIN CONTENT */}
       {/* ================================================= */}
 
       <div
         className="
           relative
+          z-10
           mx-auto
           grid
           w-full
@@ -118,8 +343,16 @@ export default function Hero() {
         {/* LEFT SIDE */}
         {/* ================================================= */}
 
-        <div className="relative z-10 max-w-2xl">
+        <div
+          className="
+            relative
+            z-10
+            max-w-2xl
+          "
+        >
+          {/* =============================================== */}
           {/* BADGE */}
+          {/* =============================================== */}
 
           <div className="mb-7">
             <div
@@ -142,7 +375,7 @@ export default function Hero() {
                   w-2
                   rounded-full
                   bg-primary
-                  shadow-[0_0_12px_rgba(0,0,0,0.15)]
+                  shadow-[0_0_12px_hsl(var(--primary)/0.5)]
                 "
               />
 
@@ -161,7 +394,9 @@ export default function Hero() {
             </div>
           </div>
 
+          {/* =============================================== */}
           {/* TITLE */}
+          {/* =============================================== */}
 
           <h1
             className="
@@ -194,7 +429,9 @@ export default function Hero() {
             </span>
           </h1>
 
+          {/* =============================================== */}
           {/* DESCRIPTION */}
+          {/* =============================================== */}
 
           <p
             className="
@@ -210,7 +447,9 @@ export default function Hero() {
             {t.hero.description}
           </p>
 
+          {/* =============================================== */}
           {/* CTA BUTTONS */}
+          {/* =============================================== */}
 
           <div
             className="
@@ -279,9 +518,9 @@ export default function Hero() {
             </Link>
           </div>
 
-          {/* ================================================= */}
-          {/* STATS */}
-          {/* ================================================= */}
+          {/* =============================================== */}
+          {/* STATISTICS */}
+          {/* =============================================== */}
 
           <div
             className="
@@ -340,7 +579,7 @@ export default function Hero() {
         </div>
 
         {/* ================================================= */}
-        {/* RIGHT SIDE — ENGINEERING GRAPHIC */}
+        {/* RIGHT SIDE */}
         {/* ================================================= */}
 
         <div
@@ -353,7 +592,9 @@ export default function Hero() {
             lg:min-h-[600px]
           "
         >
-          {/* Outer glow */}
+          {/* =============================================== */}
+          {/* ENGINEERING FIELD */}
+          {/* =============================================== */}
 
           <div
             aria-hidden="true"
@@ -370,7 +611,9 @@ export default function Hero() {
             "
           />
 
-          {/* Technical frame */}
+          {/* =============================================== */}
+          {/* OUTER RING */}
+          {/* =============================================== */}
 
           <div
             aria-hidden="true"
@@ -389,7 +632,31 @@ export default function Hero() {
             "
           />
 
-          {/* Graphic */}
+          {/* =============================================== */}
+          {/* SECOND RING */}
+          {/* =============================================== */}
+
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              h-[260px]
+              w-[260px]
+              rounded-full
+              border
+              border-dashed
+              border-primary/10
+              sm:h-[350px]
+              sm:w-[350px]
+              lg:h-[410px]
+              lg:w-[410px]
+            "
+          />
+
+          {/* =============================================== */}
+          {/* CIRCUIT GRAPHIC */}
+          {/* =============================================== */}
 
           <div
             className="
@@ -402,7 +669,9 @@ export default function Hero() {
             <CircuitGraphic />
           </div>
 
-          {/* Technical labels */}
+          {/* =============================================== */}
+          {/* TECHNICAL LABELS */}
+          {/* =============================================== */}
 
           <div
             aria-hidden="true"
@@ -445,25 +714,6 @@ export default function Hero() {
           </div>
         </div>
       </div>
-
-      {/* ================================================= */}
-      {/* BOTTOM FADE */}
-      {/* ================================================= */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute
-          bottom-0
-          left-0
-          right-0
-          h-24
-          bg-gradient-to-t
-          from-background
-          to-transparent
-        "
-      />
     </section>
   );
 }
