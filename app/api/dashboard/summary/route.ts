@@ -413,7 +413,7 @@ export async function GET(request: NextRequest) {
             .sort({
               createdAt: -1,
             })
-            .limit(10)
+            .limit(3)
             .lean()
         : [];
 

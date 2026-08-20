@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
 import Link from "next/link";
-
 import { usePathname } from "next/navigation";
 
 import {
@@ -51,11 +49,14 @@ export default function Sidebar() {
   return (
     <aside
       className="
+        fixed
+        inset-y-0
+        left-0
+        z-50
         flex
         h-screen
         w-64
         min-w-64
-        shrink-0
         flex-col
         border-r
         bg-background
@@ -91,6 +92,7 @@ export default function Sidebar() {
 
       <nav
         className="
+          min-h-0
           flex-1
           overflow-y-auto
           p-4
@@ -167,13 +169,14 @@ export default function Sidebar() {
       </nav>
 
       {/* ======================================= */}
-      {/* LOGOUT */}
+      {/* LOGOUT - ALWAYS BOTTOM */}
       {/* ======================================= */}
 
       <div
         className="
           shrink-0
           border-t
+          bg-background
           p-4
         "
       >
