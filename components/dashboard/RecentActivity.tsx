@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -13,10 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-
-// =====================================================
-// STATUS
-// =====================================================
 
 type DeviceStatus =
   | "NOT_REGISTERED"
