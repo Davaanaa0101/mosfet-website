@@ -10,7 +10,7 @@ const solutions = [
   { icon: Settings2, no: "06", title: "Системийн интеграц", desc: "Тоног төхөөрөмж, платформ болон ажлын урсгалыг нэг найдвартай экосистем болгон уялдуулна." },
 ];
 
-export default function Нүүр хуудас() {
+export default function HomePage() {
   return <main className="min-h-screen overflow-hidden bg-white text-[#101d32]">
     <header className="absolute inset-x-0 top-0 z-50">
       <div className="mx-auto flex h-[88px] max-w-[1320px] items-center justify-between px-6 lg:px-10">
@@ -31,7 +31,7 @@ export default function Нүүр хуудас() {
       <div className="mx-auto grid min-h-[650px] max-w-[1320px] items-center gap-10 px-6 pb-20 pt-16 lg:grid-cols-[1.02fr_.98fr] lg:px-10">
         <div className="relative z-10 max-w-[650px]">
           <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-cyan-300/25 bg-cyan-300/[.07] px-4 py-2 text-[10px] font-bold uppercase tracking-[.22em] text-cyan-200"><span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_#67e8f9]"/> Холбогдсон ирээдүйг инженерчилнэ</div>
-          <h1 className="text-[48px] font-semibold leading-[1.08] tracking-[-.045em] sm:text-6xl lg:text-[72px]">Технологиор<br/> moves <span className="text-[#39c4df]">салбарыг</span><br/> урагшлуулна.</h1>
+          <h1 className="text-[48px] font-semibold leading-[1.08] tracking-[-.045em] sm:text-6xl lg:text-[72px]">Технологиор<br/> бүх <span className="text-[#39c4df]">салбарыг</span><br/> урагшлуулна.</h1>
           <p className="mt-8 max-w-[510px] text-[15px] leading-8 text-slate-300">MOSFET нь үйлдвэрлэлийн автоматжуулалт, цахилгаан системээс эхлээд ухаалаг барилга, хамгаалалт болон захиалгат программ хангамж хүртэлх инженерчлэл, технологийн цогц шийдлийг санал болгодог.</p>
           <div className="mt-10 flex flex-wrap items-center gap-4"><a href="#solutions" className="inline-flex items-center gap-3 rounded-full bg-[#00a6c7] px-7 py-4 text-xs font-bold text-white shadow-xl shadow-cyan-950/30 transition hover:-translate-y-1 hover:bg-[#08b5d4]">Шийдлүүдтэй танилцах <ArrowUpRight size={16}/></a><a href="#about" className="inline-flex items-center gap-2 px-4 py-4 text-xs font-semibold text-slate-300 transition hover:text-white">MOSFET-ийн тухай <ChevronRight size={15}/></a></div>
           <div className="mt-16 flex flex-wrap gap-x-10 gap-y-5 border-t border-white/10 pt-7 text-[10px] font-semibold uppercase tracking-[.17em] text-slate-400"><span>Инженерчлэл</span><span>Автоматжуулалт</span><span>Системийн интеграц</span><span>Технологи</span></div>
