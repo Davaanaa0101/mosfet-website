@@ -141,7 +141,7 @@ export default function DashboardPage() {
                   text-[#D81B60]
                 "
               >
-                Smart Building
+                Ухаалаг барилга
               </span>
             </div>
 
@@ -156,7 +156,7 @@ export default function DashboardPage() {
                 sm:text-4xl
               "
             >
-              Dashboard
+              Хяналтын самбар
             </h1>
 
             {/* Description */}
@@ -171,9 +171,7 @@ export default function DashboardPage() {
                 sm:text-base
               "
             >
-              Monitor your connected
-              devices, telemetry, and
-              building status in real time.
+              Холбогдсон төхөөрөмжүүд, мэдрэгчийн өгөгдөл болон барилгын төлөвийг бодит цаг хугацаанд хянана.
             </p>
           </div>
 
@@ -280,7 +278,7 @@ export default function DashboardPage() {
           "
         >
           <span>
-            MOSFET Smart Building Platform
+            MOSFET Ухаалаг барилга Platform
           </span>
 
           <span className="hidden sm:block">

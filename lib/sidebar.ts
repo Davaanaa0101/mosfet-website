@@ -10,27 +10,27 @@ import {
 
 export const sidebarItems = [
   {
-    title: "Dashboard",
+    title: "Хяналтын самбар",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "Devices",
+    title: "Төхөөрөмжүүд",
     href: "/dashboard/devices",
     icon: Cpu,
   },
   {
-    title: "Alerts",
+    title: "Дохиолол",
     href: "/dashboard/alerts",
     icon: Bell,
   },
   {
-    title: "Settings",
+    title: "Тохиргоо",
     href: "/dashboard/settings",
     icon: Settings,
   },
   {
-    title: "Profile",
+    title: "Профайл",
     href: "/dashboard/profile",
     icon: User,
   },

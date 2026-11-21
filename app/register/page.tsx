@@ -15,7 +15,7 @@ import {
   Loader2,
   Lock,
   Mail,
-  Phone,
+  Утас,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -26,21 +26,21 @@ export default function RegisterPage() {
   const [name, setName] =
     useState("");
 
-  const [email, setEmail] =
+  const [email, setИ-мэйл] =
     useState("");
 
-  const [phone, setPhone] =
+  const [phone, setУтас] =
     useState("");
 
-  const [company, setCompany] =
+  const [company, setБайгууллага] =
     useState("");
 
-  const [password, setPassword] =
+  const [password, setНууц үг] =
     useState("");
 
   const [
-    confirmPassword,
-    setConfirmPassword,
+    confirmНууц үг,
+    setConfirmНууц үг,
   ] = useState("");
 
   const [error, setError] =
@@ -58,38 +58,38 @@ export default function RegisterPage() {
 
     if (!name.trim()) {
       setError(
-        "Please enter your name."
+        "Нэрээ оруулна уу."
       );
       return;
     }
 
     if (!email.trim()) {
       setError(
-        "Please enter your email."
+        "И-мэйл хаягаа оруулна уу."
       );
       return;
     }
 
     if (!phone.trim()) {
       setError(
-        "Please enter your phone number."
+        "Утасны дугаараа оруулна уу."
       );
       return;
     }
 
     if (password.length < 8) {
       setError(
-        "Password must contain at least 8 characters."
+        "Нууц үг must contain at least 8 characters."
       );
       return;
     }
 
     if (
       password !==
-      confirmPassword
+      confirmНууц үг
     ) {
       setError(
-        "Passwords do not match."
+        "Нууц үг таарахгүй байна."
       );
       return;
     }
@@ -201,7 +201,7 @@ export default function RegisterPage() {
       setError(
         error instanceof Error
           ? error.message
-          : "Unable to create account. Please try again."
+          : "Бүртгэл үүсгэх боломжгүй байна. Дахин оролдоно уу."
       );
     } finally {
       setLoading(false);
@@ -641,40 +641,40 @@ export default function RegisterPage() {
             >
               <Field
                 id="name"
-                label="Full Name"
+                label="Овог, нэр"
                 icon={
                   <User className="h-4 w-4" />
                 }
                 value={name}
                 onChange={setName}
-                placeholder="Your name"
+                placeholder="Таны нэр"
                 disabled={loading}
                 autoComplete="name"
               />
 
               <Field
                 id="email"
-                label="Email"
+                label="И-мэйл"
                 icon={
                   <Mail className="h-4 w-4" />
                 }
                 type="email"
                 value={email}
-                onChange={setEmail}
-                placeholder="you@example.com"
+                onChange={setИ-мэйл}
+                placeholder="name@example.com"
                 disabled={loading}
                 autoComplete="email"
               />
 
               <Field
                 id="phone"
-                label="Phone"
+                label="Утас"
                 icon={
-                  <Phone className="h-4 w-4" />
+                  <Утас className="h-4 w-4" />
                 }
                 type="tel"
                 value={phone}
-                onChange={setPhone}
+                onChange={setУтас}
                 placeholder="+976 99112233"
                 disabled={loading}
                 autoComplete="tel"
@@ -682,13 +682,13 @@ export default function RegisterPage() {
 
               <Field
                 id="company"
-                label="Company"
+                label="Байгууллага"
                 icon={
                   <Building2 className="h-4 w-4" />
                 }
                 value={company}
-                onChange={setCompany}
-                placeholder="Company name"
+                onChange={setБайгууллага}
+                placeholder="Байгууллагын нэр"
                 disabled={loading}
                 autoComplete="organization"
               />
@@ -696,36 +696,36 @@ export default function RegisterPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   id="password"
-                  label="Password"
+                  label="Нууц үг"
                   icon={
                     <Lock className="h-4 w-4" />
                   }
                   type="password"
                   value={password}
-                  onChange={setPassword}
-                  placeholder="Minimum 8 characters"
+                  onChange={setНууц үг}
+                  placeholder="Хамгийн багадаа 8 тэмдэгт"
                   disabled={loading}
                   autoComplete="new-password"
                 />
 
                 <Field
                   id="confirm-password"
-                  label="Confirm Password"
+                  label="Нууц үг баталгаажуулах"
                   icon={
                     <Lock className="h-4 w-4" />
                   }
                   type="password"
-                  value={confirmPassword}
+                  value={confirmНууц үг}
                   onChange={
-                    setConfirmPassword
+                    setConfirmНууц үг
                   }
-                  placeholder="Repeat password"
+                  placeholder="Нууц үгээ давтан оруулна уу"
                   disabled={loading}
                   autoComplete="new-password"
                 />
               </div>
 
-              {/* Password hint */}
+              {/* Нууц үг hint */}
 
               <div
                 className="
@@ -830,7 +830,7 @@ export default function RegisterPage() {
                   text-slate-500
                 "
               >
-                Already have an account?
+                Бүртгэлтэй юу?
               </p>
 
               <Link
@@ -847,7 +847,7 @@ export default function RegisterPage() {
                   hover:text-[#FF6B9A]
                 "
               >
-                Sign in
+                Нэвтрэх
 
                 <ArrowUpRight
                   size={14}

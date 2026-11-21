@@ -19,10 +19,10 @@ import {
 import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
-  const [email, setEmail] =
+  const [email, setИ-мэйл] =
     useState("");
 
-  const [password, setPassword] =
+  const [password, setНууц үг] =
     useState("");
 
   const [error, setError] =
@@ -40,14 +40,14 @@ export default function LoginPage() {
 
     if (!email.trim()) {
       setError(
-        "Please enter your email."
+        "И-мэйл хаягаа оруулна уу."
       );
       return;
     }
 
     if (!password) {
       setError(
-        "Please enter your password."
+        "Нууц үгээ оруулна уу."
       );
       return;
     }
@@ -64,7 +64,7 @@ export default function LoginPage() {
       if (result.error) {
         setError(
           result.error.message ||
-            "Invalid email or password."
+            "И-мэйл эсвэл нууц үг буруу байна."
         );
 
         return;
@@ -79,7 +79,7 @@ export default function LoginPage() {
       );
 
       setError(
-        "Unable to sign in. Please try again."
+        "Нэвтрэх боломжгүй байна. Дахин оролдоно уу."
       );
     } finally {
       setLoading(false);
@@ -418,7 +418,7 @@ export default function LoginPage() {
               text-white
             "
           >
-            Welcome back
+            Тавтай морилно уу
           </h1>
 
           <p
@@ -429,8 +429,8 @@ export default function LoginPage() {
               text-slate-400
             "
           >
-            Sign in to access your
-            smart building dashboard.
+            Өөрийн
+            ухаалаг барилгын хяналтын самбарт нэвтэрнэ үү.
           </p>
         </div>
 
@@ -496,7 +496,7 @@ export default function LoginPage() {
                   text-white
                 "
               >
-                Sign in
+                Нэвтрэх
               </h2>
 
               <p
@@ -506,8 +506,8 @@ export default function LoginPage() {
                   text-slate-400
                 "
               >
-                Enter your account
-                credentials below.
+                Бүртгэлийн мэдээллээ
+                доор оруулна уу.
               </p>
             </div>
 
@@ -563,7 +563,7 @@ export default function LoginPage() {
                     text-slate-300
                   "
                 >
-                  Email
+                  И-мэйл
                 </label>
 
                 <div className="relative">
@@ -588,12 +588,12 @@ export default function LoginPage() {
                     onChange={(
                       event
                     ) =>
-                      setEmail(
+                      setИ-мэйл(
                         event.target
                           .value
                       )
                     }
-                    placeholder="you@example.com"
+                    placeholder="name@example.com"
                     disabled={
                       loading
                     }
@@ -635,7 +635,7 @@ export default function LoginPage() {
                     text-slate-300
                   "
                 >
-                  Password
+                  Нууц үг
                 </label>
 
                 <div className="relative">
@@ -660,7 +660,7 @@ export default function LoginPage() {
                     onChange={(
                       event
                     ) =>
-                      setPassword(
+                      setНууц үг(
                         event.target
                           .value
                       )
@@ -738,7 +738,7 @@ export default function LoginPage() {
                     Signing in...
                   </>
                 ) : (
-                  "Sign in"
+                  "Нэвтрэх"
                 )}
               </button>
             </form>
@@ -779,7 +779,7 @@ export default function LoginPage() {
                   hover:text-[#FF6B9A]
                 "
               >
-                Create an account
+                Бүртгэл үүсгэх
 
                 <ArrowLeft
                   size={14}
