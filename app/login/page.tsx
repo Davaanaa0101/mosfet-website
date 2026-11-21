@@ -19,10 +19,10 @@ import {
 import { signIn } from "@/lib/auth-client";
 
 export default function LoginPage() {
-  const [email, setИ-мэйл] =
+  const [email, setEmail] =
     useState("");
 
-  const [password, setНууц үг] =
+  const [password, setPassword] =
     useState("");
 
   const [error, setError] =
@@ -588,7 +588,7 @@ export default function LoginPage() {
                     onChange={(
                       event
                     ) =>
-                      setИ-мэйл(
+                      setEmail(
                         event.target
                           .value
                       )
@@ -660,7 +660,7 @@ export default function LoginPage() {
                     onChange={(
                       event
                     ) =>
-                      setНууц үг(
+                      setPassword(
                         event.target
                           .value
                       )

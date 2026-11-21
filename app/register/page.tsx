@@ -15,7 +15,7 @@ import {
   Loader2,
   Lock,
   Mail,
-  Утас,
+  Phone,
   ShieldCheck,
   User,
 } from "lucide-react";
@@ -26,21 +26,21 @@ export default function RegisterPage() {
   const [name, setName] =
     useState("");
 
-  const [email, setИ-мэйл] =
+  const [email, setEmail] =
     useState("");
 
-  const [phone, setУтас] =
+  const [phone, setPhone] =
     useState("");
 
-  const [company, setБайгууллага] =
+  const [company, setCompany] =
     useState("");
 
-  const [password, setНууц үг] =
+  const [password, setPassword] =
     useState("");
 
   const [
-    confirmНууц үг,
-    setConfirmНууц үг,
+    confirmPassword,
+    setConfirmPassword,
   ] = useState("");
 
   const [error, setError] =
@@ -86,7 +86,7 @@ export default function RegisterPage() {
 
     if (
       password !==
-      confirmНууц үг
+      confirmPassword
     ) {
       setError(
         "Нууц үг таарахгүй байна."
@@ -660,7 +660,7 @@ export default function RegisterPage() {
                 }
                 type="email"
                 value={email}
-                onChange={setИ-мэйл}
+                onChange={setEmail}
                 placeholder="name@example.com"
                 disabled={loading}
                 autoComplete="email"
@@ -670,11 +670,11 @@ export default function RegisterPage() {
                 id="phone"
                 label="Утас"
                 icon={
-                  <Утас className="h-4 w-4" />
+                  <Phone className="h-4 w-4" />
                 }
                 type="tel"
                 value={phone}
-                onChange={setУтас}
+                onChange={setPhone}
                 placeholder="+976 99112233"
                 disabled={loading}
                 autoComplete="tel"
@@ -687,7 +687,7 @@ export default function RegisterPage() {
                   <Building2 className="h-4 w-4" />
                 }
                 value={company}
-                onChange={setБайгууллага}
+                onChange={setCompany}
                 placeholder="Байгууллагын нэр"
                 disabled={loading}
                 autoComplete="organization"
@@ -702,7 +702,7 @@ export default function RegisterPage() {
                   }
                   type="password"
                   value={password}
-                  onChange={setНууц үг}
+                  onChange={setPassword}
                   placeholder="Хамгийн багадаа 8 тэмдэгт"
                   disabled={loading}
                   autoComplete="new-password"
@@ -715,9 +715,9 @@ export default function RegisterPage() {
                     <Lock className="h-4 w-4" />
                   }
                   type="password"
-                  value={confirmНууц үг}
+                  value={confirmPassword}
                   onChange={
-                    setConfirmНууц үг
+                    setConfirmPassword
                   }
                   placeholder="Нууц үгээ давтан оруулна уу"
                   disabled={loading}
