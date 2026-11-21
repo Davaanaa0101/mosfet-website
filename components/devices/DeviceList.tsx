@@ -18,6 +18,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   Server,
   Wifi,
   WifiOff,
@@ -173,6 +174,9 @@ export default function DeviceList() {
   const [search, setSearch] =
     useState("");
 
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
+
   // =====================================================
   // LOAD DEVICES
   // =====================================================
@@ -244,6 +248,44 @@ export default function DeviceList() {
       },
       []
     );
+
+  // =====================================================
+  // DELETE DEVICE
+  // =====================================================
+
+  const deleteDevice = async (device: Device) => {
+    const confirmed = window.confirm(
+      `Delete "${device.name}" (${device.deviceId})?\n\nThis permanently removes the device, its telemetry history, and its alerts. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(device._id);
+    try {
+      const response = await fetch(
+        `/api/devices/${encodeURIComponent(device.deviceId)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        }
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete device");
+      }
+
+      setDevices((current) =>
+        current.filter((item) => item._id !== device._id)
+      );
+    } catch (err) {
+      window.alert(
+        err instanceof Error ? err.message : "Failed to delete device"
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // =====================================================
   // AUTO REFRESH
@@ -997,6 +1039,10 @@ export default function DeviceList() {
                       <TableHeader>
                         Last Seen
                       </TableHeader>
+
+                      <TableHeader>
+                        Actions
+                      </TableHeader>
                     </tr>
                   </thead>
 
@@ -1011,6 +1057,8 @@ export default function DeviceList() {
                           device={
                             device
                           }
+                          deleting={deletingId === device._id}
+                          onDelete={deleteDevice}
                         />
                       )
                     )}
@@ -1113,8 +1161,12 @@ function TableHeader({
 
 function DeviceRow({
   device,
+  deleting,
+  onDelete,
 }: {
   device: Device;
+  deleting: boolean;
+  onDelete: (device: Device) => void;
 }) {
   const config =
     STATUS_CONFIG[
@@ -1369,6 +1421,24 @@ function DeviceRow({
             device.lastSeen
           )}
         </span>
+      </td>
+
+      {/* ACTIONS */}
+      <td className="px-5 py-4">
+        <button
+          type="button"
+          onClick={() => onDelete(device)}
+          disabled={deleting}
+          aria-label={`Delete ${device.name}`}
+          title="Delete device"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600 transition-all hover:border-red-300 hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {deleting ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </button>
       </td>
     </tr>
   );

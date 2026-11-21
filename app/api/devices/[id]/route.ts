@@ -6,6 +6,8 @@ import {
 import { auth } from "@/lib/auth";
 import { connectDB } from "@/lib/mongodb";
 import Device from "@/models/Device";
+import DeviceLog from "@/models/DeviceLog";
+import Alert from "@/models/Alert";
 
 // =====================================================
 // GET DEVICE
@@ -173,6 +175,89 @@ export async function GET(
       {
         status: 500,
       }
+    );
+  }
+}
+
+// =====================================================
+// DELETE DEVICE
+//
+// Only the authenticated owner can delete a device.
+// Telemetry history and alerts for that device are
+// removed as part of the same application operation.
+// =====================================================
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    await connectDB();
+
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Device ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Match either the public deviceId or MongoDB _id,
+    // always constraining the query to the current owner.
+    const ownershipQuery: Record<string, unknown> = {
+      userId: session.user.id,
+      $or: [{ deviceId: id }],
+    };
+
+    if (/^[a-fA-F0-9]{24}$/.test(id)) {
+      (ownershipQuery.$or as Array<Record<string, unknown>>).push({ _id: id });
+    }
+
+    const device = await Device.findOne(ownershipQuery).lean();
+    if (!device) {
+      return NextResponse.json(
+        { success: false, error: "Device not found" },
+        { status: 404 }
+      );
+    }
+
+    // Remove dependent records before deleting the device.
+    await Promise.all([
+      DeviceLog.deleteMany({
+        $or: [
+          { deviceId: device.deviceId },
+          { serialId: device.serialId },
+        ],
+      }),
+      Alert.deleteMany({ deviceId: device.deviceId }),
+    ]);
+
+    await Device.deleteOne({
+      _id: device._id,
+      userId: session.user.id,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Device and its history were deleted successfully",
+      deviceId: device.deviceId,
+    });
+  } catch (error) {
+    console.error("[device] DELETE error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to delete device" },
+      { status: 500 }
     );
   }
 }
