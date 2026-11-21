@@ -100,6 +100,10 @@ export default function RegisterDevicePage() {
         return;
       }
 
+      // Notify the persistent sidebar so the newly registered device
+      // appears immediately without waiting for its polling interval.
+      window.dispatchEvent(new Event("mosfet:devices-updated"));
+
       setSuccess({
         serialId:
           result.data.serialId,
