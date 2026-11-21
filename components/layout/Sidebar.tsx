@@ -112,7 +112,7 @@ export default function Sidebar() {
           shrink-0
           items-center
           border-b
-          border-slate-100
+          border-white/10
           px-5
         "
       >
@@ -153,7 +153,7 @@ export default function Sidebar() {
                 text-lg
                 font-black
                 tracking-tight
-                text-slate-900
+                text-white
               "
             >
               MOSFET
@@ -165,7 +165,7 @@ export default function Sidebar() {
                 font-semibold
                 uppercase
                 tracking-[0.18em]
-                text-slate-400
+                text-slate-500
               "
             >
               Smart Building
@@ -195,7 +195,7 @@ export default function Sidebar() {
             font-bold
             uppercase
             tracking-[0.18em]
-            text-slate-400
+            text-slate-500
           "
         >
           Main Menu
@@ -246,7 +246,7 @@ export default function Sidebar() {
                       : `
                         text-slate-500
                         hover:bg-slate-50
-                        hover:text-slate-900
+                        hover:text-white
                       `
                   )}
                 >
@@ -305,7 +305,7 @@ export default function Sidebar() {
         className="
           shrink-0
           border-t
-          border-slate-100
+          border-white/10
           bg-white
           p-3
         "
@@ -390,7 +390,7 @@ export default function Sidebar() {
             mt-3
             text-center
             text-[9px]
-            text-slate-400
+            text-slate-500
           "
         >
           MOSFET Smart Building Platform

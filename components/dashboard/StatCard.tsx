@@ -34,7 +34,7 @@ export default function StatCard({
         transition-all
         duration-300
         hover:-translate-y-1
-        hover:border-slate-300
+        hover:border-cyan-300/30
         hover:shadow-lg
       "
     >
@@ -92,7 +92,7 @@ export default function StatCard({
               text-3xl
               font-bold
               tracking-tight
-              text-slate-900
+              text-white
             "
           >
             {value}

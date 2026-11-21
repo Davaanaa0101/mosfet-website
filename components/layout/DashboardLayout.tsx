@@ -2,6 +2,7 @@
 
 import Sidebar from "./Sidebar";
 import Navbar from "./DashboardNavbar";
+import "./premium-glass.css";
 
 export default function DashboardLayout({
   children,
@@ -9,7 +10,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="dashboard-shell min-h-screen w-full bg-muted/30">
+    <div className="dashboard-shell min-h-screen w-full bg-[#06101d] text-slate-100">
       {/* ========================================= */}
       {/* FIXED SIDEBAR */}
       {/* ========================================= */}
@@ -20,7 +21,7 @@ export default function DashboardLayout({
       {/* RIGHT SIDE */}
       {/* ========================================= */}
 
-      <div className="ml-64 flex min-h-screen min-w-0 flex-col">
+      <div className="dashboard-main ml-64 flex min-h-screen min-w-0 flex-col">
         {/* ======================================= */}
         {/* NAVBAR */}
         {/* ======================================= */}
@@ -31,7 +32,7 @@ export default function DashboardLayout({
         {/* MAIN CONTENT */}
         {/* ======================================= */}
 
-        <main className="min-w-0 flex-1 overflow-auto p-6">
+        <main className="min-w-0 flex-1 overflow-auto p-5 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>
