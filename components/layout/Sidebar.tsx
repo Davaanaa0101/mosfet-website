@@ -86,7 +86,20 @@ export default function Sidebar() {
   // so devices registered elsewhere appear without a manual page refresh.
   useEffect(() => {
     void loadDevices();
-    const handleDeviceUpdate = () => void loadDevices();
+    const handleDeviceUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ deviceId?: string; name?: string }>).detail;
+      if (detail?.deviceId && typeof detail.name === "string") {
+        setDevices((current) =>
+          current.map((device) =>
+            device.deviceId === detail.deviceId || device._id === detail.deviceId
+              ? { ...device, name: detail.name!.trim() || device.name }
+              : device,
+          ),
+        );
+      }
+      // Re-fetch the canonical list as well, keeping all device metadata in sync.
+      void loadDevices();
+    };
     const handleVisibility = () => {
       if (document.visibilityState === "visible") void loadDevices();
     };

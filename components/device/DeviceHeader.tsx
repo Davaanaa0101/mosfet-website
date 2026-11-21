@@ -59,6 +59,13 @@ export default function DeviceHeader({ deviceId }: Props) {
       await updateDevice(deviceId, { name, location, identifier });
       await queryClient.invalidateQueries({ queryKey: ["device", deviceId] });
       await queryClient.invalidateQueries({ queryKey: ["devices"] });
+      // Notify the persistent sidebar immediately so its device label is
+      // updated without waiting for the sidebar's background polling cycle.
+      window.dispatchEvent(
+        new CustomEvent("mosfet:devices-updated", {
+          detail: { deviceId, name: name.trim() },
+        }),
+      );
       setEditing(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Could not save device details.");
