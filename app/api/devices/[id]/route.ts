@@ -179,6 +179,56 @@ export async function GET(
   }
 }
 
+
+// =====================================================
+// UPDATE DEVICE DISPLAY DETAILS
+// =====================================================
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const location = typeof body.location === "string" ? body.location.trim() : "";
+    const identifier = typeof body.identifier === "string" ? body.identifier.trim() : "";
+
+    if (!name) {
+      return NextResponse.json({ success: false, error: "Device name is required" }, { status: 400 });
+    }
+    if (name.length > 80 || location.length > 100 || identifier.length > 80) {
+      return NextResponse.json({ success: false, error: "Name, location, or identifier is too long" }, { status: 400 });
+    }
+
+    await connectDB();
+    const lookup: Record<string, unknown> = { userId: session.user.id, $or: [{ deviceId: id }] };
+    if (/^[a-fA-F0-9]{24}$/.test(id)) {
+      (lookup.$or as Array<Record<string, unknown>>).push({ _id: id });
+    }
+
+    const device = await Device.findOneAndUpdate(
+      lookup,
+      { $set: { name, location, identifier } },
+      { new: true, runValidators: true },
+    ).select("-apiKey -provisioningKey").lean();
+
+    if (!device) {
+      return NextResponse.json({ success: false, error: "Device not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, device: { ...device, _id: String(device._id) } });
+  } catch (error) {
+    console.error("[device] PATCH error:", error);
+    return NextResponse.json({ success: false, error: "Failed to update device" }, { status: 500 });
+  }
+}
+
 // =====================================================
 // DELETE DEVICE
 //

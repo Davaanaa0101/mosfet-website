@@ -2,6 +2,8 @@ export interface Device {
   _id: string;
   deviceId: string;
   name: string;
+  identifier?: string;
+  serialId?: string;
   type: string;
   location: string;
 

@@ -47,6 +47,9 @@ export interface IDevice
 
   name: string;
 
+  /** User-defined identifier shown in the dashboard. */
+  identifier?: string;
+
   type:
     | "esp32"
     | "plc"
@@ -208,6 +211,12 @@ const DeviceSchema =
       name: {
         type: String,
         required: true,
+        trim: true,
+      },
+
+      identifier: {
+        type: String,
+        default: "",
         trim: true,
       },
 
