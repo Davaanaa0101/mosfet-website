@@ -411,6 +411,9 @@ export async function GET(
               device.name ||
               device.deviceId,
 
+            deviceNameVersion:
+              device.updatedAt?.getTime?.() || 0,
+
             status:
               device.status,
 
@@ -477,6 +480,9 @@ export async function GET(
           deviceName:
             device.name ||
             device.deviceId,
+
+          deviceNameVersion:
+            device.updatedAt?.getTime?.() || 0,
 
           status:
             device.status,
@@ -566,6 +572,9 @@ export async function GET(
           deviceName:
             device.name ||
             device.deviceId,
+
+          deviceNameVersion:
+            device.updatedAt?.getTime?.() || 0,
 
           status:
             device.status,

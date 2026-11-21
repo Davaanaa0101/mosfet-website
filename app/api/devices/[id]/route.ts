@@ -214,7 +214,7 @@ export async function PATCH(
 
     const device = await Device.findOneAndUpdate(
       lookup,
-      { $set: { name, location, identifier } },
+      { $set: { name, location, identifier, nameCustomized: true, locationCustomized: true } },
       { new: true, runValidators: true },
     ).select("-apiKey -provisioningKey").lean();
 

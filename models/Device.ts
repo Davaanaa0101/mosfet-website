@@ -50,6 +50,10 @@ export interface IDevice
   /** User-defined identifier shown in the dashboard. */
   identifier?: string;
 
+  /** Prevent telemetry payloads from overwriting dashboard-managed labels. */
+  nameCustomized?: boolean;
+  locationCustomized?: boolean;
+
   type:
     | "esp32"
     | "plc"
@@ -218,6 +222,16 @@ const DeviceSchema =
         type: String,
         default: "",
         trim: true,
+      },
+
+      // Dashboard-managed fields must not be overwritten by device heartbeats.
+      nameCustomized: {
+        type: Boolean,
+        default: false,
+      },
+      locationCustomized: {
+        type: Boolean,
+        default: false,
       },
 
       // -----------------------------------------
