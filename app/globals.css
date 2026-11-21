@@ -180,3 +180,8 @@
     color: white;
   }
 }
+
+/* MOSFET / TechPack-inspired corporate visual system */
+html { scroll-behavior: smooth; }
+body { background: #fff; color: #102b49; }
+::selection { background: #00a6c7; color: #fff; }

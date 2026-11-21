@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "MOSFET Engineering",
-  description: "Automation, Electrical Engineering, Security Systems and Software Solutions",
+  description: "MOSFET — Engineering, industrial automation, electrical systems, security and software integration.",
 
   icons: {
     icon: "/favicon.svg",
