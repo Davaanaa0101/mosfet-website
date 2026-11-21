@@ -224,3 +224,156 @@ body { background: #fff; color: #102b49; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important; }.reveal { opacity:1;transform:none; } }
 @media (max-width:767px) { .hero-section { min-height:auto; }.hero-visual { max-width:470px; }.floating-glass { padding:9px 10px;gap:7px; }.floating-glass b { font-size:8px; }.floating-glass small { font-size:7px; }.float-icon { width:29px;height:29px; }.hero-glass-core { border-radius:27px; }.core-inner svg { width:74px;height:74px; }.core-inner span { font-size:6px; }.about-copy { padding-left:22px; }.contact-glass { padding:25px; } }
 @media (max-width:390px) { .hero-title { font-size:44px; }.floating-glass { transform:scale(.88); }.float-one { left:-5%; }.float-two { right:-5%; }.float-three { left:-5%; }.float-four { right:-5%; } }
+
+
+/* ==========================================================
+   MOSFET PREMIUM GLASS SYSTEM — AUTH + ALL DASHBOARD ROUTES
+   Presentation-only overrides; application logic is untouched.
+   ========================================================== */
+.dashboard-shell {
+  --dash-bg: #061729;
+  --dash-panel: rgba(14, 39, 62, .72);
+  --dash-panel-strong: rgba(17, 48, 73, .88);
+  --dash-line: rgba(155, 218, 237, .16);
+  --dash-text: #eaf6fb;
+  --dash-muted: #91aabd;
+  min-height: 100vh;
+  color: var(--dash-text);
+  background:
+    radial-gradient(ellipse at 88% 3%, rgba(0, 181, 211, .15), transparent 34%),
+    radial-gradient(ellipse at 5% 72%, rgba(30, 106, 161, .13), transparent 34%),
+    linear-gradient(135deg, #061729 0%, #0a2035 52%, #07192b 100%) !important;
+}
+.dashboard-shell aside {
+  color: #dcebf2 !important;
+  background: linear-gradient(180deg, rgba(8, 29, 49, .96), rgba(5, 22, 39, .94)) !important;
+  border-color: var(--dash-line) !important;
+  box-shadow: 16px 0 55px rgba(0,0,0,.16), inset -1px 0 rgba(180,230,245,.035);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+}
+.dashboard-shell aside a { color: #9eb5c5; transition: color .2s, background .2s, border-color .2s, transform .2s; }
+.dashboard-shell aside a:hover { color: #eafaff !important; background: rgba(81, 206, 225, .09) !important; transform: translateX(2px); }
+.dashboard-shell aside a[aria-current="page"],
+.dashboard-shell aside a.bg-primary,
+.dashboard-shell aside a[class*="bg-blue"],
+.dashboard-shell aside a[class*="bg-slate"] {
+  color: #a8f3fa !important;
+  border: 1px solid rgba(103, 222, 238, .2);
+  background: linear-gradient(100deg, rgba(37, 166, 194, .19), rgba(41, 106, 143, .12)) !important;
+  box-shadow: inset 3px 0 #58ddeb, 0 8px 24px rgba(0,0,0,.12);
+}
+.dashboard-shell header {
+  color: #eaf6fb !important;
+  background: rgba(7, 27, 46, .68) !important;
+  border-color: var(--dash-line) !important;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 8px 35px rgba(0,0,0,.12);
+}
+.dashboard-shell main { color: var(--dash-text); }
+.dashboard-shell main h1,
+.dashboard-shell main h2,
+.dashboard-shell main h3,
+.dashboard-shell main h4 { color: #edf8fc; }
+.dashboard-shell main p,
+.dashboard-shell main label,
+.dashboard-shell main small { color: inherit; }
+.dashboard-shell main [class*="rounded-xl"],
+.dashboard-shell main [class*="rounded-2xl"],
+.dashboard-shell main [class*="rounded-3xl"] {
+  border-color: var(--dash-line) !important;
+}
+.dashboard-shell main [class*="bg-white"],
+.dashboard-shell main [class*="bg-card"],
+.dashboard-shell main [class*="bg-background"],
+.dashboard-shell main [class*="bg-muted"] {
+  background: linear-gradient(145deg, rgba(20, 53, 78, .78), rgba(8, 31, 51, .82)) !important;
+  color: #e7f4f9 !important;
+  border-color: var(--dash-line) !important;
+  box-shadow: inset 0 1px rgba(255,255,255,.055), 0 16px 42px rgba(0,0,0,.13);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.dashboard-shell main [class*="text-slate-"],
+.dashboard-shell main [class*="text-gray-"],
+.dashboard-shell main [class*="text-muted-foreground"] { color: #9bb2c1 !important; }
+.dashboard-shell main [class*="border-slate-"],
+.dashboard-shell main [class*="border-gray-"] { border-color: var(--dash-line) !important; }
+.dashboard-shell main input,
+.dashboard-shell main textarea,
+.dashboard-shell main select,
+.dashboard-shell main [role="combobox"] {
+  color: #eaf6fb !important;
+  background: rgba(3, 20, 36, .62) !important;
+  border: 1px solid rgba(155, 218, 237, .2) !important;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 5px rgba(0,0,0,.12);
+}
+.dashboard-shell main input::placeholder,
+.dashboard-shell main textarea::placeholder { color: #718da0 !important; }
+.dashboard-shell main input:focus,
+.dashboard-shell main textarea:focus,
+.dashboard-shell main select:focus,
+.dashboard-shell main [role="combobox"]:focus-visible {
+  outline: none;
+  border-color: rgba(87, 221, 235, .65) !important;
+  box-shadow: 0 0 0 3px rgba(47, 190, 211, .12), 0 0 22px rgba(0,185,213,.08);
+}
+.dashboard-shell main table { color: #dcebf2; border-collapse: separate; border-spacing: 0; }
+.dashboard-shell main thead { background: rgba(71, 139, 166, .12); }
+.dashboard-shell main th { color: #9dc4d2 !important; font-weight: 700; }
+.dashboard-shell main td, .dashboard-shell main th { border-color: rgba(155,218,237,.1) !important; }
+.dashboard-shell main tbody tr { transition: background .18s; }
+.dashboard-shell main tbody tr:hover { background: rgba(73, 198, 218, .055) !important; }
+.dashboard-shell main button { transition: transform .2s, filter .2s, box-shadow .2s; }
+.dashboard-shell main button:hover { filter: brightness(1.08); }
+.dashboard-shell main button:active { transform: translateY(1px) scale(.99); }
+.dashboard-shell main button[class*="bg-primary"],
+.dashboard-shell main button[class*="bg-blue"],
+.dashboard-shell main a[class*="bg-primary"] {
+  color: #042033 !important;
+  border-color: rgba(140,241,247,.35) !important;
+  background: linear-gradient(115deg,#9af4f4,#39cde0 58%,#169fbe) !important;
+  box-shadow: 0 8px 25px rgba(0,185,213,.2), inset 0 1px rgba(255,255,255,.55);
+}
+.dashboard-shell [role="dialog"],
+.dashboard-shell [data-radix-popper-content-wrapper] > *,
+.dashboard-shell [role="menu"] {
+  color: #eaf6fb !important;
+  background: rgba(9, 32, 52, .96) !important;
+  border: 1px solid var(--dash-line) !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.38) !important;
+  backdrop-filter: blur(26px);
+}
+.dashboard-shell main svg { flex-shrink: 0; }
+
+/* Login and registration surfaces share the same premium visual language. */
+body:has(main.bg-\[\#07111F\]) { background: #061729; }
+body:has(main.bg-\[\#07111F\]) main,
+body:has(main[class*="bg-[#07111F]"]) main { color: #eaf6fb; }
+body:has(main[class*="bg-[#07111F]"]) main > div[class*="rounded"] {
+  border: 1px solid rgba(160, 225, 240, .2) !important;
+  background: linear-gradient(145deg, rgba(24, 65, 91, .78), rgba(7, 29, 49, .88)) !important;
+  box-shadow: 0 30px 90px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.1) !important;
+  backdrop-filter: blur(28px) saturate(155%);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+}
+body:has(main[class*="bg-[#07111F]"]) input {
+  color: #edfaff !important;
+  background: rgba(2, 19, 34, .58) !important;
+  border: 1px solid rgba(155, 218, 237, .22) !important;
+  border-radius: 13px !important;
+}
+body:has(main[class*="bg-[#07111F]"]) input:focus {
+  border-color: rgba(87,221,235,.7) !important;
+  box-shadow: 0 0 0 3px rgba(47,190,211,.13) !important;
+}
+@media (max-width: 767px) {
+  .dashboard-shell > div.ml-64 { margin-left: 0 !important; }
+  .dashboard-shell main { padding: 1rem !important; }
+  .dashboard-shell header { padding-left: 1rem !important; padding-right: 1rem !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell *, .dashboard-shell *::before, .dashboard-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

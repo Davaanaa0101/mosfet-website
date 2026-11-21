@@ -9,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen w-full bg-muted/30">
+    <div className="dashboard-shell min-h-screen w-full bg-muted/30">
       {/* ========================================= */}
       {/* FIXED SIDEBAR */}
       {/* ========================================= */}
