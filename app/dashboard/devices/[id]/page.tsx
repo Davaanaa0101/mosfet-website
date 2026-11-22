@@ -3,6 +3,7 @@ import DeviceStatusCard from "@/components/device/DeviceStatusCard";
 import DeviceTelemetry from "@/components/device/DeviceTelemetry";
 import DeviceConfiguration from "@/components/device/DeviceConfiguration";
 import SensorGrid from "@/components/device/SensorGrid";
+import DeviceElectricityCost from "@/components/device/DeviceElectricityCost";
 
 interface Props {
   params: Promise<{
@@ -22,6 +23,8 @@ export default async function DevicePage({
       <DeviceStatusCard deviceId={id} />
 
       <SensorGrid deviceId={id} />
+
+      <DeviceElectricityCost deviceId={id} />
 
       <DeviceConfiguration
         deviceId={id}
