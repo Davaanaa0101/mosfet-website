@@ -5,6 +5,12 @@ export interface Device {
   type: string;
   location: string;
 
+  /** User-defined dashboard identifier; persisted in MongoDB. */
+  identifier?: string;
+
+  /** Hardware serial identifier reported by the device, when available. */
+  serialId?: string;
+
   status: "online" | "offline";
 
   firmware?: string;
