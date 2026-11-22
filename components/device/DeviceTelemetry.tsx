@@ -252,7 +252,7 @@ export default function DeviceTelemetry({
             await fetch(
               `/api/devices/${encodeURIComponent(
                 deviceId
-              )}/telemetry?range=${range}&limit=5000`,
+              )}/telemetry?range=${range}&limit=1000`,
               {
                 method: "GET",
                 cache: "no-store",
@@ -328,41 +328,6 @@ export default function DeviceTelemetry({
     loadConfig,
     loadTelemetry,
   ]);
-
-  // ===================================================
-  // SHARED RANGE-FILTERED TELEMETRY
-  //
-  // Every chart (temperature, humidity, current,
-  // voltage, power and energy) must use this exact
-  // dataset so the selected period is applied equally.
-  // The API also filters by range; this client-side
-  // guard keeps every metric aligned if cached/legacy
-  // records are ever returned outside the requested
-  // window.
-  // ===================================================
-
-  const filteredData = useMemo(() => {
-    const durationMs: Record<Range, number> = {
-      "1h": 60 * 60 * 1000,
-      "6h": 6 * 60 * 60 * 1000,
-      "24h": 24 * 60 * 60 * 1000,
-      "7d": 7 * 24 * 60 * 60 * 1000,
-      "30d": 30 * 24 * 60 * 60 * 1000,
-    };
-
-    const cutoff = Date.now() - durationMs[range];
-
-    return data
-      .filter((record) => {
-        const timestamp = new Date(record.createdAt).getTime();
-        return Number.isFinite(timestamp) && timestamp >= cutoff;
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() -
-          new Date(b.createdAt).getTime()
-      );
-  }, [data, range]);
 
   // ===================================================
   // CONFIGURED SENSORS
@@ -492,7 +457,7 @@ export default function DeviceTelemetry({
           );
 
         const chartData: ChartData[] =
-          filteredData.map(
+          data.map(
             (record) => {
               const row: ChartData =
                 {
@@ -539,7 +504,7 @@ export default function DeviceTelemetry({
         };
       },
       [
-        filteredData,
+        data,
         range,
         getSensorName,
       ]
@@ -627,7 +592,7 @@ export default function DeviceTelemetry({
 
   const genericChartData =
     useMemo(() => {
-      return filteredData.map(
+      return data.map(
         (item) => ({
           createdAt:
             item.createdAt,
@@ -660,7 +625,7 @@ export default function DeviceTelemetry({
         })
       );
     }, [
-      filteredData,
+      data,
       range,
     ]);
 
@@ -862,7 +827,7 @@ export default function DeviceTelemetry({
               icon={BarChart3}
               label="Records"
               value={
-                filteredData.length
+                data.length
               }
             />
 
@@ -1009,7 +974,7 @@ export default function DeviceTelemetry({
 
       {!loading &&
         !error &&
-        filteredData.length === 0 && (
+        data.length === 0 && (
           <Card
             className="
               rounded-3xl
@@ -1200,7 +1165,7 @@ export default function DeviceTelemetry({
       {/* SYSTEM TELEMETRY */}
       {/* ================================================= */}
 
-      {filteredData.length > 0 && (
+      {data.length > 0 && (
         <div>
           <div
             className="
@@ -1352,7 +1317,7 @@ export default function DeviceTelemetry({
 
       {!loading &&
         !error &&
-        filteredData.length > 0 &&
+        data.length > 0 &&
         configuredSensors.length ===
           0 && (
           <Card

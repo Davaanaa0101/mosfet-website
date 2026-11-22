@@ -100,10 +100,6 @@ export default function RegisterDevicePage() {
         return;
       }
 
-      // Notify the persistent sidebar so the newly registered device
-      // appears immediately without waiting for its polling interval.
-      window.dispatchEvent(new Event("mosfet:devices-updated"));
-
       setSuccess({
         serialId:
           result.data.serialId,
@@ -165,7 +161,7 @@ export default function RegisterDevicePage() {
   // =====================================================
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
+    <div className="mosfet-glass-page relative isolate mx-auto max-w-5xl space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
       {/* ================================================= */}
       {/* PAGE HEADER */}
       {/* ================================================= */}
@@ -183,9 +179,9 @@ export default function RegisterDevicePage() {
             justify-center
             rounded-xl
             border
-            bg-card
-            text-muted-foreground
-            shadow-sm
+            bg-white/[0.045]
+            text-slate-400
+            shadow-[0_18px_55px_rgba(0,0,0,0.22)]
             transition-all
             duration-200
             hover:-translate-x-0.5
@@ -206,7 +202,7 @@ export default function RegisterDevicePage() {
             Register Device
           </h1>
 
-          <p className="mt-2 max-w-2xl text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-slate-400">
             Connect an ESP32 device to your
             MOSFET Smart Building account.
           </p>
@@ -223,7 +219,7 @@ export default function RegisterDevicePage() {
           {/* REGISTRATION CARD */}
           {/* ================================================= */}
 
-          <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
             {/* Card header */}
 
             <div className="relative overflow-hidden border-b px-6 py-8 md:px-8">
@@ -265,7 +261,7 @@ export default function RegisterDevicePage() {
                     Device Registration
                   </h2>
 
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-1 text-sm leading-6 text-slate-400">
                     Enter the Serial ID printed
                     on your ESP32 device to
                     connect it to MOSFET.
@@ -314,7 +310,7 @@ export default function RegisterDevicePage() {
                   </label>
 
                   <div className="relative">
-                    <Cpu className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                    <Cpu className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
 
                     <input
                       id="serialId"
@@ -340,8 +336,8 @@ export default function RegisterDevicePage() {
                         w-full
                         rounded-xl
                         border
-                        border-border
-                        bg-background
+                        border-white/10
+                        bg-white/[0.035]
                         pl-12
                         pr-4
                         font-mono
@@ -350,7 +346,7 @@ export default function RegisterDevicePage() {
                         transition-all
                         duration-200
                         placeholder:font-sans
-                        placeholder:text-muted-foreground
+                        placeholder:text-slate-400
                         hover:border-primary/40
                         focus:border-primary
                         focus:ring-4
@@ -361,7 +357,7 @@ export default function RegisterDevicePage() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
                     <Radio className="h-3.5 w-3.5" />
 
                     <span>
@@ -376,7 +372,7 @@ export default function RegisterDevicePage() {
 
                 {/* INFORMATION */}
 
-                <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
                   <div className="flex gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                       <ClipboardCheck className="h-4 w-4 text-primary" />
@@ -387,7 +383,7 @@ export default function RegisterDevicePage() {
                         Before registering
                       </p>
 
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      <p className="mt-1 text-xs leading-5 text-slate-400">
                         Make sure the Serial ID
                         matches the ID configured
                         on your ESP32 device.
@@ -454,7 +450,7 @@ export default function RegisterDevicePage() {
           <div className="space-y-6">
             {/* How it works */}
 
-            <div className="rounded-3xl border bg-card p-6 shadow-sm">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.045] p-6 text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
               <h3 className="font-bold">
                 How it works
               </h3>
@@ -494,7 +490,7 @@ export default function RegisterDevicePage() {
                 Secure Device Access
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="mt-2 text-sm leading-6 text-slate-400">
                 After registration, your device
                 may receive a unique API key for
                 authenticated communication with
@@ -509,7 +505,7 @@ export default function RegisterDevicePage() {
         /* ================================================= */
 
         <div className="mx-auto max-w-3xl">
-          <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
             {/* Success header */}
 
             <div className="relative overflow-hidden border-b px-6 py-10 text-center md:px-8">
@@ -526,7 +522,7 @@ export default function RegisterDevicePage() {
                   Device Registered
                 </h2>
 
-                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
                   Your ESP32 has been successfully
                   registered and connected to your
                   MOSFET account.
@@ -563,7 +559,7 @@ export default function RegisterDevicePage() {
                 />
 
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                     Status
                   </p>
 
@@ -597,7 +593,7 @@ export default function RegisterDevicePage() {
                             Device API Key
                           </p>
 
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="mt-1 text-xs text-slate-400">
                             Use this key to authenticate
                             your ESP32.
                           </p>
@@ -616,7 +612,7 @@ export default function RegisterDevicePage() {
                             gap-2
                             rounded-xl
                             border
-                            bg-background
+                            bg-white/[0.035]
                             px-4
                             py-2
                             text-sm
@@ -643,7 +639,7 @@ export default function RegisterDevicePage() {
                         </button>
                       </div>
 
-                      <div className="mt-4 rounded-xl border bg-background p-3">
+                      <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
                         <code className="block break-all font-mono text-xs leading-6">
                           {
                             success.apiKey
@@ -678,7 +674,7 @@ export default function RegisterDevicePage() {
                     justify-center
                     rounded-xl
                     border
-                    bg-background
+                    bg-white/[0.035]
                     px-4
                     text-sm
                     font-semibold
@@ -770,7 +766,7 @@ function Step({
           </p>
         </div>
 
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+        <p className="mt-1 text-xs leading-5 text-slate-400">
           {description}
         </p>
       </div>
@@ -792,8 +788,8 @@ function InfoBox({
   mono?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border bg-muted/20 p-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
         {label}
       </p>
 

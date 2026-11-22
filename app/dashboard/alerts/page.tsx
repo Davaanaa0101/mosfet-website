@@ -300,12 +300,12 @@ export default function AlertsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
+      <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
 
         <div>
-          <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200" />
+          <div className="h-9 w-32 animate-pulse rounded-lg bg-white/[0.07]" />
 
-          <div className="mt-3 h-4 w-72 animate-pulse rounded bg-slate-100" />
+          <div className="mt-3 h-4 w-72 animate-pulse rounded bg-white/[0.045]" />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -315,13 +315,13 @@ export default function AlertsPage() {
             (_, index) => (
               <div
                 key={index}
-                className="h-32 animate-pulse rounded-3xl bg-slate-100"
+                className="h-32 animate-pulse rounded-3xl bg-white/[0.045]"
               />
             )
           )}
         </div>
 
-        <div className="h-20 animate-pulse rounded-3xl bg-slate-100" />
+        <div className="h-20 animate-pulse rounded-3xl bg-white/[0.045]" />
 
         <div className="space-y-4">
           {Array.from({
@@ -330,7 +330,7 @@ export default function AlertsPage() {
             (_, index) => (
               <div
                 key={index}
-                className="h-40 animate-pulse rounded-3xl bg-slate-100"
+                className="h-40 animate-pulse rounded-3xl bg-white/[0.045]"
               />
             )
           )}
@@ -344,7 +344,7 @@ export default function AlertsPage() {
   // ===================================================
 
   return (
-    <div className="space-y-8">
+    <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
 
       {/* ================================================= */}
       {/* HEADER */}
@@ -354,16 +354,16 @@ export default function AlertsPage() {
 
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-400/[0.08]">
               <AlertTriangle className="h-5 w-5 text-red-500" />
             </div>
 
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-3xl font-bold tracking-tight text-white">
                 Alerts
               </h1>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-400">
                 Monitor sensor and device conditions.
               </p>
             </div>
@@ -385,17 +385,17 @@ export default function AlertsPage() {
             gap-2
             rounded-xl
             border
-            border-slate-200
-            bg-white
+            border-white/10
+            bg-white/[0.045]
             px-4
             py-2.5
             text-sm
             font-semibold
-            text-slate-700
-            shadow-sm
+            text-slate-200
+            shadow-[0_18px_55px_rgba(0,0,0,0.22)]
             transition-all
             hover:border-primary/30
-            hover:bg-slate-50
+            hover:bg-white/[0.035]
             hover:text-primary
             disabled:cursor-not-allowed
             disabled:opacity-50
@@ -425,15 +425,15 @@ export default function AlertsPage() {
             gap-3
             rounded-2xl
             border
-            border-red-200
-            bg-red-50
+            border-red-400/20
+            bg-red-400/[0.08]
             px-4
             py-3
           "
         >
           <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
 
-          <p className="text-sm font-medium text-red-700">
+          <p className="text-sm font-medium text-red-300">
             {error}
           </p>
         </div>
@@ -455,7 +455,7 @@ export default function AlertsPage() {
             <AlertTriangle className="h-5 w-5" />
           }
           iconClass="
-            bg-red-50
+            bg-red-400/[0.08]
             text-red-500
           "
           valueClass="text-red-600"
@@ -471,7 +471,7 @@ export default function AlertsPage() {
             <AlertTriangle className="h-5 w-5" />
           }
           iconClass="
-            bg-red-50
+            bg-red-400/[0.08]
             text-red-500
           "
           valueClass="text-red-600"
@@ -518,9 +518,9 @@ export default function AlertsPage() {
       <Card
         className="
           rounded-3xl
-          border-slate-200
-          bg-white
-          shadow-sm
+          border-white/10
+          bg-white/[0.045]
+          shadow-[0_18px_55px_rgba(0,0,0,0.22)]
         "
       >
         <CardContent className="p-5">
@@ -528,13 +528,13 @@ export default function AlertsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
             <div>
-              <p className="text-sm font-bold text-slate-800">
+              <p className="text-sm font-bold text-slate-100">
                 Alert History
               </p>
 
               <p className="mt-1 text-xs text-slate-400">
                 Showing{" "}
-                <span className="font-semibold text-slate-600">
+                <span className="font-semibold text-slate-300">
                   {
                     filteredAlerts.length
                   }
@@ -568,13 +568,13 @@ export default function AlertsPage() {
                 className="
                   rounded-xl
                   border
-                  border-slate-200
-                  bg-slate-50
+                  border-white/10
+                  bg-white/[0.035]
                   px-3
                   py-2
                   text-sm
                   font-medium
-                  text-slate-700
+                  text-slate-200
                   outline-none
                   transition
                   focus:border-primary
@@ -614,13 +614,13 @@ export default function AlertsPage() {
                 className="
                   rounded-xl
                   border
-                  border-slate-200
-                  bg-slate-50
+                  border-white/10
+                  bg-white/[0.035]
                   px-3
                   py-2
                   text-sm
                   font-medium
-                  text-slate-700
+                  text-slate-200
                   outline-none
                   transition
                   focus:border-primary
@@ -659,9 +659,9 @@ export default function AlertsPage() {
         <Card
           className="
             rounded-3xl
-            border-slate-200
-            bg-white
-            shadow-sm
+            border-white/10
+            bg-white/[0.045]
+            shadow-[0_18px_55px_rgba(0,0,0,0.22)]
           "
         >
           <CardContent className="py-20">
@@ -682,7 +682,7 @@ export default function AlertsPage() {
                 <CheckCircle2 className="h-8 w-8 text-emerald-500" />
               </div>
 
-              <h2 className="mt-5 text-lg font-bold text-slate-800">
+              <h2 className="mt-5 text-lg font-bold text-slate-100">
                 No alerts
               </h2>
 
@@ -739,9 +739,9 @@ function SummaryCard({
     <Card
       className="
         rounded-3xl
-        border-slate-200
-        bg-white
-        shadow-sm
+        border-white/10
+        bg-white/[0.045]
+        shadow-[0_18px_55px_rgba(0,0,0,0.22)]
         transition-all
         duration-300
         hover:-translate-y-1
@@ -822,14 +822,14 @@ function AlertCard({
       className={`
         overflow-hidden
         rounded-3xl
-        bg-white
-        shadow-sm
+        bg-white/[0.045]
+        shadow-[0_18px_55px_rgba(0,0,0,0.22)]
         transition-all
         duration-300
         hover:shadow-md
         ${
           isActive
-            ? "border-red-200"
+            ? "border-red-400/20"
             : "border-emerald-200"
         }
       `}
@@ -867,7 +867,7 @@ function AlertCard({
 
               <div className="flex flex-wrap items-center gap-2">
 
-                <h3 className="text-base font-bold text-slate-800">
+                <h3 className="text-base font-bold text-slate-100">
                   {alert.title}
                 </h3>
 
@@ -885,7 +885,7 @@ function AlertCard({
 
               </div>
 
-              <p className="mt-2 text-sm leading-6 text-slate-500">
+              <p className="mt-2 text-sm leading-6 text-slate-400">
                 {alert.message}
               </p>
 
@@ -895,7 +895,7 @@ function AlertCard({
 
                 <span className="text-slate-400">
                   Device{" "}
-                  <strong className="font-semibold text-slate-700">
+                  <strong className="font-semibold text-slate-200">
                     {alert.deviceName ||
                       alert.deviceId}
                   </strong>
@@ -904,7 +904,7 @@ function AlertCard({
                 {alert.sensorName && (
                   <span className="text-slate-400">
                     Sensor{" "}
-                    <strong className="font-semibold text-slate-700">
+                    <strong className="font-semibold text-slate-200">
                       {
                         alert.sensorName
                       }
@@ -916,7 +916,7 @@ function AlertCard({
                   "number" && (
                   <span className="text-slate-400">
                     Slot{" "}
-                    <strong className="font-semibold text-slate-700">
+                    <strong className="font-semibold text-slate-200">
                       {
                         alert.slot
                       }
@@ -941,7 +941,7 @@ function AlertCard({
               justify-between
               gap-6
               border-t
-              border-slate-100
+              border-white/10
               pt-4
               lg:min-w-[230px]
               lg:flex-col
@@ -961,7 +961,7 @@ function AlertCard({
                   Current value
                 </p>
 
-                <p className="mt-1 text-xl font-bold text-slate-800">
+                <p className="mt-1 text-xl font-bold text-slate-100">
                   {formatNumber(
                     alert.value
                   )}{" "}
@@ -973,7 +973,7 @@ function AlertCard({
                   "number" && (
                   <p className="mt-1 text-xs text-slate-400">
                     Limit{" "}
-                    <span className="font-semibold text-slate-600">
+                    <span className="font-semibold text-slate-300">
                       {formatNumber(
                         alert.threshold
                       )}{" "}
@@ -1026,7 +1026,7 @@ function SeverityBadge({
   const classes =
     severity ===
     "critical"
-      ? "bg-red-50 text-red-600 border-red-100"
+      ? "bg-red-400/[0.08] text-red-600 border-red-100"
       : severity ===
           "warning"
         ? "bg-amber-50 text-amber-600 border-amber-100"
@@ -1081,7 +1081,7 @@ function StatusBadge({
         tracking-wide
         ${
           active
-            ? "border-red-100 bg-red-50 text-red-600"
+            ? "border-red-100 bg-red-400/[0.08] text-red-600"
             : "border-emerald-100 bg-emerald-50 text-emerald-600"
         }
       `}
@@ -1093,7 +1093,7 @@ function StatusBadge({
           rounded-full
           ${
             active
-              ? "bg-red-500"
+              ? "bg-red-400/[0.08]0"
               : "bg-emerald-500"
           }
         `}
@@ -1157,7 +1157,7 @@ function getSeverityClass(
 ) {
   switch (severity) {
     case "critical":
-      return "bg-red-50 text-red-500";
+      return "bg-red-400/[0.08] text-red-500";
 
     case "warning":
       return "bg-amber-50 text-amber-500";

@@ -1,3 +1,4 @@
+import "./glass-theme.css";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 

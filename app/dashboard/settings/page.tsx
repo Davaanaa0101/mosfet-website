@@ -276,20 +276,20 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
+      <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold tracking-tight text-white">
             Settings
           </h1>
 
-          <p className="mt-1 text-muted-foreground">
+          <p className="mt-1 text-slate-400">
             Configure your smart building platform.
           </p>
         </div>
 
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
           <CardContent className="py-12">
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-slate-400">
               Loading settings...
             </p>
           </CardContent>
@@ -303,17 +303,17 @@ export default function SettingsPage() {
   // ===================================================
 
   return (
-    <div className="space-y-8">
+    <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
       {/* ============================================= */}
       {/* HEADER */}
       {/* ============================================= */}
 
       <div>
-        <h1 className="text-3xl font-bold">
+        <h1 className="text-3xl font-bold tracking-tight text-white">
           Settings
         </h1>
 
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-slate-400">
           Configure device and sensor alert thresholds.
         </p>
       </div>
@@ -323,7 +323,7 @@ export default function SettingsPage() {
       {/* ============================================= */}
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+        <div className="rounded-2xl border border-red-400/20 bg-red-400/[0.08] p-4">
           <p className="text-sm text-destructive">
             {error}
           </p>
@@ -335,7 +335,7 @@ export default function SettingsPage() {
       {/* ============================================= */}
 
       {success && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4">
+        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.08] p-4">
           <p className="text-sm text-green-700 dark:text-green-400">
             {success}
           </p>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
       {/* TEMPERATURE */}
       {/* ============================================= */}
 
-      <Card>
+      <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-orange-500/10 p-2 text-orange-600">
@@ -354,11 +354,11 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <CardTitle>
+              <CardTitle className="text-white">
                 Temperature
               </CardTitle>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Configure temperature warning thresholds.
               </p>
             </div>
@@ -428,7 +428,7 @@ export default function SettingsPage() {
       {/* HUMIDITY */}
       {/* ============================================= */}
 
-      <Card>
+      <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-blue-500/10 p-2 text-blue-600">
@@ -436,11 +436,11 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <CardTitle>
+              <CardTitle className="text-white">
                 Humidity
               </CardTitle>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Configure humidity warning thresholds.
               </p>
             </div>
@@ -510,7 +510,7 @@ export default function SettingsPage() {
       {/* ELECTRICAL */}
       {/* ============================================= */}
 
-      <Card>
+      <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-yellow-500/10 p-2 text-yellow-600">
@@ -518,11 +518,11 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <CardTitle>
+              <CardTitle className="text-white">
                 Electrical
               </CardTitle>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Configure electrical monitoring alerts.
               </p>
             </div>
@@ -564,7 +564,7 @@ export default function SettingsPage() {
       {/* NETWORK */}
       {/* ============================================= */}
 
-      <Card>
+      <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-purple-500/10 p-2 text-purple-600">
@@ -572,11 +572,11 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <CardTitle>
+              <CardTitle className="text-white">
                 Network
               </CardTitle>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Configure Wi-Fi signal monitoring.
               </p>
             </div>
@@ -618,7 +618,7 @@ export default function SettingsPage() {
       {/* DEVICE */}
       {/* ============================================= */}
 
-      <Card>
+      <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-red-500/10 p-2 text-red-600">
@@ -626,11 +626,11 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <CardTitle>
+              <CardTitle className="text-white">
                 Device Connection
               </CardTitle>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-400">
                 Configure when a device should be considered offline.
               </p>
             </div>
@@ -638,7 +638,7 @@ export default function SettingsPage() {
         </CardHeader>
 
         <CardContent>
-          <div className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
@@ -660,7 +660,7 @@ export default function SettingsPage() {
                   Device Offline
                 </p>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-400">
                   Create an alert when no telemetry is received for the selected time.
                 </p>
               </div>
@@ -735,7 +735,7 @@ function ThresholdRow({
   unit: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
@@ -753,7 +753,7 @@ function ThresholdRow({
             {title}
           </p>
 
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-400">
             {description}
           </p>
         </div>
@@ -771,10 +771,10 @@ function ThresholdRow({
             )
           }
           disabled={!enabled}
-          className="w-28 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className="w-28 rounded-xl border border-white/10 bg-white/[0.035] text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
         />
 
-        <span className="w-12 text-sm text-muted-foreground">
+        <span className="w-12 text-sm text-slate-400">
           {unit}
         </span>
       </div>
@@ -862,7 +862,7 @@ function DurationInput({
             )
           );
         }}
-        className="w-24 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+        className="w-24 rounded-xl border border-white/10 bg-white/[0.035] text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
       />
 
       <select
@@ -912,7 +912,7 @@ function DurationInput({
             )
           );
         }}
-        className="rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+        className="rounded-xl border border-white/10 bg-white/[0.035] text-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
       >
         <option value="seconds">
           seconds

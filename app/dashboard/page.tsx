@@ -1,3 +1,4 @@
+import ElectricityBillCard from "@/components/dashboard/ElectricityBillCard";
 import DeviceStatus from "@/components/dashboard/DeviceStatus";
 import LatestTelemetry from "@/components/dashboard/LatestTelemetry";
 import RecentActivity from "@/components/dashboard/RecentActivity";
@@ -7,9 +8,16 @@ export default function DashboardPage() {
   return (
     <div
       className="
+        mosfet-glass-page
         relative
+        isolate
         min-h-full
         overflow-hidden
+        rounded-[28px]
+        bg-[#07111F]
+        p-4
+        text-slate-100
+        sm:p-6
       "
     >
       {/* ================================================= */}
@@ -35,7 +43,7 @@ export default function DashboardPage() {
             h-[500px]
             w-[500px]
             rounded-full
-            bg-blue-500/[0.035]
+            bg-cyan-400/[0.08]
             blur-[120px]
           "
         />
@@ -50,7 +58,7 @@ export default function DashboardPage() {
             h-[450px]
             w-[450px]
             rounded-full
-            bg-[#E91E63]/[0.025]
+            bg-blue-500/[0.07]
             blur-[120px]
           "
         />
@@ -138,7 +146,7 @@ export default function DashboardPage() {
                   font-bold
                   uppercase
                   tracking-[0.25em]
-                  text-[#D81B60]
+                  text-cyan-300
                 "
               >
                 Ухаалаг барилга
@@ -152,7 +160,7 @@ export default function DashboardPage() {
                 text-3xl
                 font-black
                 tracking-tight
-                text-slate-950
+                text-white
                 sm:text-4xl
               "
             >
@@ -191,7 +199,7 @@ export default function DashboardPage() {
               py-2
               text-xs
               font-medium
-              text-emerald-700
+              text-emerald-300
             "
           >
             <span
@@ -215,6 +223,8 @@ export default function DashboardPage() {
         <section>
           <StatsGrid />
         </section>
+
+        <ElectricityBillCard />
 
         {/* ================================================= */}
         {/* LATEST TELEMETRY */}
@@ -271,7 +281,7 @@ export default function DashboardPage() {
             items-center
             justify-between
             border-t
-            border-slate-200
+            border-white/10
             pt-5
             text-[11px]
             text-slate-400

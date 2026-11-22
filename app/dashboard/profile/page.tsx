@@ -261,34 +261,34 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="space-y-8">
+      <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
         {/* Header */}
 
         <div className="space-y-2">
-          <div className="h-9 w-32 animate-pulse rounded-lg bg-muted" />
+          <div className="h-9 w-32 animate-pulse rounded-lg bg-white/[0.06]" />
 
-          <div className="h-5 w-72 animate-pulse rounded-lg bg-muted" />
+          <div className="h-5 w-72 animate-pulse rounded-lg bg-white/[0.06]" />
         </div>
 
         {/* Profile skeleton */}
 
-        <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
-          <div className="h-32 animate-pulse bg-muted" />
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
+          <div className="h-32 animate-pulse bg-white/[0.06]" />
 
           <div className="px-6 pb-8">
-            <div className="-mt-12 h-24 w-24 animate-pulse rounded-2xl bg-muted ring-4 ring-card" />
+            <div className="-mt-12 h-24 w-24 animate-pulse rounded-2xl bg-white/[0.06] ring-4 ring-[#0A1629]" />
 
             <div className="mt-5 space-y-3">
-              <div className="h-7 w-48 animate-pulse rounded bg-muted" />
+              <div className="h-7 w-48 animate-pulse rounded bg-white/[0.06]" />
 
-              <div className="h-4 w-64 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-64 animate-pulse rounded bg-white/[0.06]" />
             </div>
           </div>
         </div>
 
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
           <CardContent className="py-12">
-            <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-3 text-sm text-slate-400">
               <Loader2 className="h-4 w-4 animate-spin" />
 
               Loading profile...
@@ -304,7 +304,7 @@ export default function ProfilePage() {
   // =====================================================
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="relative isolate mx-auto max-w-6xl space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
       {/* ================================================= */}
       {/* PAGE HEADER */}
       {/* ================================================= */}
@@ -314,11 +314,11 @@ export default function ProfilePage() {
           Account
         </p>
 
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-white md:text-4xl">
           Profile
         </h1>
 
-        <p className="mt-2 max-w-2xl text-muted-foreground">
+        <p className="mt-2 max-w-2xl text-slate-400">
           Manage your personal information
           and account details.
         </p>
@@ -356,7 +356,7 @@ export default function ProfilePage() {
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
 
-          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          <p className="text-sm font-medium text-emerald-300">
             {success}
           </p>
         </div>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
       {/* PROFILE HERO */}
       {/* ================================================= */}
 
-      <div className="relative overflow-hidden rounded-3xl border bg-card shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
         {/* Background */}
 
         <div className="absolute inset-x-0 top-0 h-36 overflow-hidden">
@@ -410,7 +410,7 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
               {/* Avatar */}
 
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-xl shadow-primary/20 ring-4 ring-card">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow-xl shadow-primary/20 ring-4 ring-[#0A1629]">
                 {getInitials(
                   profile.name,
                   profile.email
@@ -421,7 +421,7 @@ export default function ProfilePage() {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="truncate text-2xl font-bold text-foreground">
+                  <h2 className="truncate text-2xl font-bold text-white">
                     {profile.name ||
                       "Unnamed User"}
                   </h2>
@@ -435,7 +435,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
-                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
                   <Mail className="h-4 w-4" />
 
                   <span className="truncate">
@@ -448,7 +448,7 @@ export default function ProfilePage() {
 
             {/* Account status */}
 
-            <div className="flex items-center gap-2 rounded-xl border bg-background/70 px-4 py-3 backdrop-blur">
+            <div className="flex items-center gap-2 rounded-xl border bg-white/[0.035] px-4 py-3 backdrop-blur">
               <span className="relative flex h-3 w-3">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
 
@@ -472,21 +472,21 @@ export default function ProfilePage() {
         {/* PERSONAL INFORMATION */}
         {/* ================================================= */}
 
-        <Card className="overflow-hidden rounded-3xl border shadow-sm">
+        <Card className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
           {/* Header */}
 
-          <div className="border-b bg-muted/20 px-6 py-5 md:px-8">
+          <div className="border-b bg-white/[0.035] px-6 py-5 md:px-8">
             <div className="flex items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <UserRound className="h-5 w-5" />
               </div>
 
               <div>
-                <h3 className="font-semibold text-foreground">
+                <h3 className="font-semibold text-white">
                   Personal Information
                 </h3>
 
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-slate-400">
                   Update your account information.
                 </p>
               </div>
@@ -499,13 +499,13 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <label
                 htmlFor="profile-name"
-                className="text-sm font-semibold text-foreground"
+                className="text-sm font-semibold text-white"
               >
                 Full Name
               </label>
 
               <div className="relative">
-                <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                 <input
                   id="profile-name"
@@ -538,15 +538,15 @@ export default function ProfilePage() {
                     w-full
                     rounded-xl
                     border
-                    border-border
-                    bg-background
+                    border-white/10
+                    bg-white/[0.035]
                     pl-11
                     pr-4
                     text-sm
                     outline-none
                     transition-all
                     duration-200
-                    placeholder:text-muted-foreground
+                    placeholder:text-slate-400
                     hover:border-primary/40
                     focus:border-primary
                     focus:ring-4
@@ -557,7 +557,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-400">
                 This name will be displayed
                 throughout your account.
               </p>
@@ -568,13 +568,13 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <label
                 htmlFor="profile-email"
-                className="text-sm font-semibold text-foreground"
+                className="text-sm font-semibold text-white"
               >
                 Email Address
               </label>
 
               <div className="relative">
-                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                 <input
                   id="profile-email"
@@ -588,18 +588,18 @@ export default function ProfilePage() {
                     w-full
                     rounded-xl
                     border
-                    border-border
-                    bg-muted/50
+                    border-white/10
+                    bg-white/[0.035]
                     pl-11
                     pr-4
                     text-sm
-                    text-muted-foreground
+                    text-slate-400
                     outline-none
                   "
                 />
               </div>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-400">
                 Email address changes are
                 disabled for now.
               </p>
@@ -608,11 +608,11 @@ export default function ProfilePage() {
             {/* ROLE */}
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">
+              <label className="text-sm font-semibold text-white">
                 Account Role
               </label>
 
-              <div className="flex h-12 items-center justify-between rounded-xl border border-border bg-muted/30 px-4">
+              <div className="flex h-12 items-center justify-between rounded-xl border border-white/10 bg-white/[0.025] px-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                     <Shield className="h-4 w-4 text-primary" />
@@ -634,7 +634,7 @@ export default function ProfilePage() {
             {/* SAVE */}
 
             <div className="flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-400">
                 Changes are saved to your
                 account immediately.
               </p>
@@ -697,7 +697,7 @@ export default function ProfilePage() {
         <div className="space-y-6">
           {/* Account */}
 
-          <Card className="rounded-3xl border shadow-sm">
+          <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
@@ -709,7 +709,7 @@ export default function ProfilePage() {
                     Account
                   </h3>
 
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-slate-400">
                     Access information
                   </p>
                 </div>
@@ -718,8 +718,8 @@ export default function ProfilePage() {
               <div className="mt-6 space-y-4">
                 {/* Role */}
 
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                     Role
                   </p>
 
@@ -732,8 +732,8 @@ export default function ProfilePage() {
 
                 {/* Status */}
 
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                     Status
                   </p>
 
@@ -751,7 +751,7 @@ export default function ProfilePage() {
 
           {/* Security */}
 
-          <Card className="rounded-3xl border shadow-sm">
+          <Card className="rounded-3xl border border-white/10 bg-white/[0.045] text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
             <CardContent className="p-6">
               <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
@@ -762,7 +762,7 @@ export default function ProfilePage() {
                   Account Security
                 </h3>
 
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <p className="mt-2 text-sm leading-6 text-slate-400">
                   Your account is protected
                   by the MOSFET Smart
                   Building authentication

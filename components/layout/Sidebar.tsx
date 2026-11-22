@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
   Settings2,
   ShieldCheck,
   UserRound,
+  ReceiptText,
   Loader2,
   Zap,
 } from "lucide-react";
@@ -21,23 +22,11 @@ import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/auth-client";
 
 type NavLink = { label: string; href: string; icon?: React.ElementType };
-type SidebarDevice = {
-  _id: string;
-  deviceId: string;
-  name: string;
-};
 
-const deviceListLink: NavLink = {
-  label: "Бүх төхөөрөмж",
-  href: "/dashboard/devices",
-  icon: Cpu,
-};
-
-const registerDeviceLink: NavLink = {
-  label: "Төхөөрөмж бүртгэх",
-  href: "/dashboard/devices/register",
-  icon: Plus,
-};
+const deviceLinks: NavLink[] = [
+  { label: "Бүх төхөөрөмж", href: "/dashboard/devices", icon: Cpu },
+  { label: "Төхөөрөмж бүртгэх", href: "/dashboard/devices/register", icon: Plus },
+];
 
 function routeIsActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
@@ -47,73 +36,13 @@ function routeIsActive(pathname: string, href: string) {
 export default function Sidebar() {
   const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
-  const [devices, setDevices] = useState<SidebarDevice[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
   const [devicesOpen, setDevicesOpen] = useState(
     pathname.startsWith("/dashboard/devices"),
   );
 
-  const loadDevices = useCallback(async () => {
-    try {
-      const response = await fetch("/api/devices", {
-        method: "GET",
-        credentials: "include",
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error(`Device request failed: ${response.status}`);
-      const result = await response.json();
-      if (result.success && Array.isArray(result.devices)) {
-        setDevices(
-          result.devices.map((device: SidebarDevice) => ({
-            _id: String(device._id),
-            deviceId: String(device.deviceId),
-            name: String(device.name || device.deviceId),
-          })),
-        );
-      }
-    } catch (error) {
-      console.error("[Sidebar] Failed to load devices:", error);
-    } finally {
-      setDevicesLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (pathname.startsWith("/dashboard/devices")) setDevicesOpen(true);
   }, [pathname]);
-
-  // Load on mount, refresh after registration, on tab focus, and periodically
-  // so devices registered elsewhere appear without a manual page refresh.
-  useEffect(() => {
-    void loadDevices();
-    const handleDeviceUpdate = (event: Event) => {
-      const detail = (event as CustomEvent<{ deviceId?: string; name?: string }>).detail;
-      if (detail?.deviceId && typeof detail.name === "string") {
-        setDevices((current) =>
-          current.map((device) =>
-            device.deviceId === detail.deviceId || device._id === detail.deviceId
-              ? { ...device, name: detail.name!.trim() || device.name }
-              : device,
-          ),
-        );
-      }
-      // Re-fetch the canonical list as well, keeping all device metadata in sync.
-      void loadDevices();
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") void loadDevices();
-    };
-    window.addEventListener("mosfet:devices-updated", handleDeviceUpdate);
-    window.addEventListener("focus", handleDeviceUpdate);
-    document.addEventListener("visibilitychange", handleVisibility);
-    const interval = window.setInterval(() => void loadDevices(), 15000);
-    return () => {
-      window.removeEventListener("mosfet:devices-updated", handleDeviceUpdate);
-      window.removeEventListener("focus", handleDeviceUpdate);
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.clearInterval(interval);
-    };
-  }, [loadDevices]);
 
   async function handleLogout() {
     try {
@@ -131,6 +60,7 @@ export default function Sidebar() {
   const alertsActive = routeIsActive(pathname, "/dashboard/alerts");
   const settingsActive = routeIsActive(pathname, "/dashboard/settings");
   const profileActive = routeIsActive(pathname, "/dashboard/profile");
+  const tariffActive = routeIsActive(pathname, "/dashboard/electricity");
 
   return (
     <aside className="mosfet-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh w-64 min-w-64 flex-col overflow-hidden">
@@ -177,49 +107,16 @@ export default function Sidebar() {
           >
             <div className="min-h-0 overflow-hidden">
               <div className="ml-[26px] mt-1 space-y-1 border-l border-cyan-300/15 pl-3">
-                <Link
-                  href={deviceListLink.href}
-                  className={cn("sidebar-sub-link", routeIsActive(pathname, deviceListLink.href) && pathname === deviceListLink.href && "is-active")}
-                >
-                  <Cpu className="h-3.5 w-3.5 shrink-0" />
-                  <span>{deviceListLink.label}</span>
-                </Link>
-
-                <div className="my-2 border-t border-white/[0.06]" />
-                {devicesLoading && devices.length === 0 ? (
-                  <div className="flex items-center gap-2 px-2 py-2 text-[11px] text-slate-500">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Төхөөрөмж ачаалж байна...
-                  </div>
-                ) : devices.length > 0 ? (
-                  <div className="space-y-1">
-                    {devices.map((device) => {
-                      const href = `/dashboard/devices/${encodeURIComponent(device.deviceId)}`;
-                      const active = pathname === href || pathname === `/dashboard/devices/${encodeURIComponent(device._id)}`;
-                      return (
-                        <Link
-                          key={device._id || device.deviceId}
-                          href={href}
-                          title={`${device.name} · ${device.deviceId}`}
-                          className={cn("sidebar-sub-link group/device min-w-0", active && "is-active")}
-                        >
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300/70 transition-colors group-hover/device:bg-cyan-200" />
-                          <span className="min-w-0 truncate">{device.name}</span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="px-2 py-2 text-[10px] text-slate-600">Бүртгэлтэй төхөөрөмж алга</p>
-                )}
-
-                <Link
-                  href={registerDeviceLink.href}
-                  className={cn("sidebar-sub-link mt-2 border-t border-white/[0.06] pt-3", routeIsActive(pathname, registerDeviceLink.href) && "is-active")}
-                >
-                  <Plus className="h-3.5 w-3.5 shrink-0" />
-                  <span>{registerDeviceLink.label}</span>
-                </Link>
+                {deviceLinks.map((item) => {
+                  const active = routeIsActive(pathname, item.href);
+                  const Icon = item.icon ?? Cpu;
+                  return (
+                    <Link key={item.href} href={item.href} className={cn("sidebar-sub-link", active && "is-active")}>
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -230,6 +127,11 @@ export default function Sidebar() {
           <Bell className="sidebar-icon" />
           <span className="min-w-0 flex-1">Дохиолол</span>
           {alertsActive && <span className="sidebar-active-dot" />}
+        </Link>
+        <Link href="/dashboard/electricity" className={cn("sidebar-link group mb-2", tariffActive && "is-active")}>
+          <ReceiptText className="sidebar-icon" />
+          <span className="min-w-0 flex-1">Цахилгааны төлбөр</span>
+          {tariffActive && <span className="sidebar-active-dot" />}
         </Link>
         <div className="sidebar-info-card mt-5 rounded-2xl p-3.5">
           <div className="mb-2 flex items-center gap-2">

@@ -457,26 +457,24 @@ export async function POST(
     registeredDevice.lastSeen =
       new Date();
 
-    // Preserve names edited in the web dashboard. Device firmware may
-    // continue sending its original name on every heartbeat.
     if (
-      !registeredDevice.nameCustomized &&
       typeof name === "string" &&
       name.trim()
     ) {
-      registeredDevice.name = name.trim();
+      registeredDevice.name =
+        name.trim();
     }
 
     registeredDevice.type =
       normalizedType;
 
-    // Preserve dashboard-managed locations against telemetry updates too.
     if (
-      !registeredDevice.locationCustomized &&
-      typeof location === "string" &&
+      typeof location ===
+        "string" &&
       location.trim()
     ) {
-      registeredDevice.location = location.trim();
+      registeredDevice.location =
+        location.trim();
     }
 
     if (

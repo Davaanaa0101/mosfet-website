@@ -16,7 +16,7 @@ export default async function DevicePage({
   const { id } = await params;
 
   return (
-    <div className="space-y-8">
+    <div className="mosfet-glass-page relative isolate space-y-8 rounded-[28px] bg-[#07111F] p-4 text-slate-100 sm:p-6">
       <DeviceHeader deviceId={id} />
 
       <DeviceStatusCard deviceId={id} />
